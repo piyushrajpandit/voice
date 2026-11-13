@@ -32,7 +32,7 @@ from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from scam_detector import analyze_transcript
+from scam_detector import analyze_transcript, warmup_models
 import db
 import sms_service
 import telecom_bridge
@@ -68,6 +68,9 @@ if ML_AVAILABLE and WhisperModel is not None:
         print("Multilingual faster-whisper loaded successfully!")
     except Exception as e:
         print(f"Whisper load error: {e}")
+
+# Pre-warm semantic embedding models in background thread
+warmup_models()
 
 def classify_audio_slice(audio_slice, sr=16000):
     if classifier is not None:
