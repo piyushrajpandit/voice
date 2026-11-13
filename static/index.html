@@ -147,59 +147,55 @@
             text-rendering: optimizeLegibility;
         }
 
-        /* ── Ambient Background Media ── */
-        .bg-media-container {
+        /* ── Top 2px solid risk line ── */
+        .top-risk-line {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--risk);
+            z-index: 9999;
+        }
+
+        /* ── Fixed full-screen dot field canvas ── */
+        #bg-canvas {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            overflow: hidden;
-            z-index: -1;
             pointer-events: none;
+            z-index: 0;
         }
 
-        .bg-media-asset {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: center;
-            opacity: 0.18;
-            filter: contrast(110%);
-            transition: opacity 0.25s ease;
-        }
-
-        [data-theme="dark"] .bg-media-asset {
-            opacity: 0.32;
-        }
-
-        .bg-media-overlay {
-            position: absolute;
+        /* ── Radial vignette overlay ── */
+        .vignette-overlay {
+            position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(180deg, var(--bg-overlay-start), var(--bg-overlay-end));
-            transition: background 0.25s ease;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 1;
+            background: radial-gradient(circle at center, transparent 30%, var(--bg) 100%);
         }
 
-        /* ── Top Navigation ── */
+        /* ── Top Navigation (56px tall, 1px bottom border, max-width 880px, centered) ── */
         .site-nav {
             position: sticky;
             top: 0;
             z-index: 100;
-            background: var(--nav-bg);
-            backdrop-filter: saturate(180%) blur(20px);
-            -webkit-backdrop-filter: saturate(180%) blur(20px);
-            border-bottom: 1px solid var(--border-subtle);
-            transition: background 0.2s ease, border-color 0.2s ease;
+            background: var(--bg);
+            border-bottom: 1px solid var(--line);
         }
 
         .nav-inner {
-            max-width: 1120px;
+            max-width: 880px;
             margin: 0 auto;
-            padding: 8px 24px;
-            min-height: 66px;
+            padding: 0 16px;
+            height: 56px;
+            min-height: 56px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -211,84 +207,103 @@
             align-items: center;
             gap: 10px;
             text-decoration: none;
-            color: var(--text-primary);
-            font-size: 0.95rem;
-            font-weight: 600;
-            letter-spacing: -0.01em;
+            color: var(--text);
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
             flex-shrink: 0;
         }
 
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: var(--status-safe);
-            display: inline-block;
+        .nav-brand svg {
+            color: var(--risk);
         }
 
-        /* ── Nav Tabs (Independent Floating Glass Buttons) ── */
+        /* ── Nav Tabs (Centered, 1px active red underline) ── */
         .nav-tabs {
             display: flex;
             align-items: center;
             background: transparent;
             border: none;
             padding: 0;
-            gap: 14px;
+            gap: 24px;
+        }
+
+        @media (max-width: 640px) {
+            .nav-tabs {
+                display: none;
+            }
         }
 
         .nav-tab-btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 13px 22px;
-            border: 1px solid var(--glass-btn-border);
-            background: var(--glass-btn-bg);
-            backdrop-filter: blur(14px) saturate(180%);
-            -webkit-backdrop-filter: blur(14px) saturate(180%);
-            color: var(--glass-btn-text);
+            padding: 18px 0;
+            border: none;
+            background: transparent;
+            color: var(--sub);
             font-family: var(--font-sans);
-            font-size: 15px;
-            font-weight: 500;
-            letter-spacing: -0.01em;
-            line-height: 1.2;
-            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 600;
             cursor: pointer;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
-            transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+            position: relative;
             white-space: nowrap;
             user-select: none;
+            transition: color 0.15s ease;
+            box-shadow: none;
         }
 
         .nav-tab-btn:hover {
-            background: var(--glass-btn-hover-bg);
-            border-color: var(--glass-btn-hover-border);
-            color: var(--text-primary);
-            transform: translateY(-1px);
-        }
-
-        .nav-tab-btn:active {
-            transform: translateY(0);
+            color: var(--text);
+            background: transparent;
+            border: none;
+            transform: none;
         }
 
         .nav-tab-btn.active {
-            background: var(--glass-btn-active-bg);
-            border-color: var(--glass-btn-active-border);
-            color: var(--text-primary);
-            font-weight: 600;
-            box-shadow: var(--glass-btn-active-glow);
+            color: var(--text);
+            background: transparent;
+            border: none;
+            box-shadow: none;
         }
 
-        .nav-tab-btn:focus-visible {
-            outline: none;
-            box-shadow: var(--focus-ring);
+        .nav-tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--risk);
         }
 
-        /* ── Nav Actions & Theme Toggle ── */
+        /* ── Nav Actions & Status Dot ── */
         .nav-actions {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
             flex-shrink: 0;
+        }
+
+        /* 10px blinking status dot */
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--risk);
+            animation: pulse-dot 1.2s ease-in-out infinite;
+            display: inline-block;
+            cursor: default;
+        }
+
+        .status-dot.offline {
+            background-color: var(--warning);
+            animation: none;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
         }
 
         .theme-toggle-btn {
@@ -1260,28 +1275,33 @@
 </head>
 <body>
 
-    <!-- Ambient Background Media Animation -->
-    <div class="bg-media-container" aria-hidden="true">
-        <img src="/static/dark_loop_smooth.gif" alt="" class="bg-media-asset">
-        <div class="bg-media-overlay"></div>
-    </div>
+    <!-- Top 2px solid risk line -->
+    <div class="top-risk-line"></div>
+
+    <!-- Fixed full-screen dot field canvas -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Radial vignette overlay -->
+    <div class="vignette-overlay"></div>
 
     <!-- Top Navigation -->
     <header class="site-nav">
         <div class="nav-inner">
             <a href="/" class="nav-brand">
-                <span class="status-dot" aria-hidden="true"></span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
                 <span>Voice Clone Shield</span>
             </a>
             
-            <!-- Navigation Tabs (Moved from page body into navbar) -->
+            <!-- Navigation Tabs -->
             <nav class="nav-tabs" role="tablist" aria-label="Verification Mode">
-                <button class="nav-tab-btn active" id="tab-audio" role="tab" aria-selected="true" onclick="switchMode('audio')">Audio Analysis</button>
-                <button class="nav-tab-btn" id="tab-call" role="tab" aria-selected="false" onclick="switchMode('call')">Live Monitor</button>
-                <button class="nav-tab-btn" id="tab-scam" role="tab" aria-selected="false" onclick="switchMode('scam')">Fraud Audit</button>
+                <button class="nav-tab-btn active" id="tab-audio" role="tab" aria-selected="true" onclick="switchMode('audio')">Analysis</button>
+                <button class="nav-tab-btn" id="tab-call" role="tab" aria-selected="false" onclick="switchMode('call')">Live monitor</button>
+                <button class="nav-tab-btn" id="tab-scam" role="tab" aria-selected="false" onclick="switchMode('scam')">Audit log</button>
             </nav>
 
-            <!-- Navbar Actions & Theme Toggle -->
+            <!-- Navbar Actions & Status Dot -->
             <div class="nav-actions">
                 <button class="nav-install-btn" id="pwa-install-nav-btn" onclick="triggerPWAInstall()" aria-label="Install App" title="Install VoiceShield App on Phone" style="display: none;">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1289,24 +1309,9 @@
                         <polyline points="7 10 12 15 17 10"></polyline>
                         <line x1="12" y1="15" x2="12" y2="3"></line>
                     </svg>
-                    <span>Install App</span>
+                    <span>Install</span>
                 </button>
-                <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">
-                    <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <circle cx="12" cy="12" r="5"></circle>
-                        <line x1="12" y1="1" x2="12" y2="3"></line>
-                        <line x1="12" y1="21" x2="12" y2="23"></line>
-                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                        <line x1="1" y1="12" x2="3" y2="12"></line>
-                        <line x1="21" y1="12" x2="23" y2="12"></line>
-                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                    </svg>
-                    <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                    </svg>
-                </button>
+                <div class="status-dot" id="header-status-dot" role="status" aria-label="Model working" title="Model working"></div>
             </div>
         </div>
     </header>
@@ -1762,6 +1767,163 @@
          APPLICATION JAVASCRIPT LOGIC
     ────────────────────────────────────────── -->
     <script>
+    /* ─────────────────────────────────────────────────────────────
+       1. GLOBAL BACKGROUND CANVAS: 34px Grid, 1.5px Dots, Mouse Easing
+       ───────────────────────────────────────────────────────────── */
+    const bgCanvas = document.getElementById('bg-canvas');
+    const bgCtx = bgCanvas ? bgCanvas.getContext('2d') : null;
+    let bgWidth = 0, bgHeight = 0;
+    const GRID_STEP = 34;
+    const DOT_SIZE = 1.5;
+    const INFLUENCE_RADIUS = 150;
+    const MAX_OFFSET = 14;
+
+    const mouse = { x: -9999, y: -9999, targetX: -9999, targetY: -9999, active: false };
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const canHover = window.matchMedia('(hover: hover)').matches;
+
+    function resizeBgCanvas() {
+        if (!bgCanvas || !bgCtx) return;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        bgWidth = window.innerWidth;
+        bgHeight = window.innerHeight;
+        bgCanvas.width = bgWidth * dpr;
+        bgCanvas.height = bgHeight * dpr;
+        bgCanvas.style.width = bgWidth + 'px';
+        bgCanvas.style.height = bgHeight + 'px';
+        bgCtx.scale(dpr, dpr);
+        if (prefersReducedMotion) drawStaticGrid();
+    }
+    window.addEventListener('resize', resizeBgCanvas);
+
+    if (canHover) {
+        window.addEventListener('mousemove', (e) => {
+            mouse.targetX = e.clientX;
+            mouse.targetY = e.clientY;
+            mouse.active = true;
+        });
+        window.addEventListener('mouseleave', () => {
+            mouse.active = false;
+        });
+    }
+
+    function drawStaticGrid() {
+        if (!bgCtx) return;
+        bgCtx.clearRect(0, 0, bgWidth, bgHeight);
+        bgCtx.fillStyle = 'rgba(242, 238, 238, 0.08)';
+        for (let x = GRID_STEP / 2; x < bgWidth; x += GRID_STEP) {
+            for (let y = GRID_STEP / 2; y < bgHeight; y += GRID_STEP) {
+                bgCtx.fillRect(x - DOT_SIZE / 2, y - DOT_SIZE / 2, DOT_SIZE, DOT_SIZE);
+            }
+        }
+    }
+
+    let isDocumentVisible = !document.hidden;
+    document.addEventListener('visibilitychange', () => {
+        isDocumentVisible = !document.hidden;
+        if (isDocumentVisible && !prefersReducedMotion) {
+            requestAnimationFrame(renderBg);
+        }
+    });
+
+    function renderBg(timestamp) {
+        if (!isDocumentVisible || prefersReducedMotion || !bgCtx) return;
+
+        // Smooth mouse coords with 0.12 easing
+        if (mouse.active) {
+            mouse.x += (mouse.targetX - mouse.x) * 0.12;
+            mouse.y += (mouse.targetY - mouse.y) * 0.12;
+        } else {
+            mouse.x += (-9999 - mouse.x) * 0.12;
+            mouse.y += (-9999 - mouse.y) * 0.12;
+        }
+
+        bgCtx.clearRect(0, 0, bgWidth, bgHeight);
+
+        // Opacity oscillating between 0.03 and 0.17 slowly
+        const osc = 0.10 + 0.07 * Math.sin((timestamp || 0) * 0.0008);
+
+        const cols = Math.ceil(bgWidth / GRID_STEP);
+        const rows = Math.ceil(bgHeight / GRID_STEP);
+
+        for (let c = 0; c < cols; c++) {
+            const bx = c * GRID_STEP + GRID_STEP / 2;
+            for (let r = 0; r < rows; r++) {
+                const by = r * GRID_STEP + GRID_STEP / 2;
+
+                let dx = bx - mouse.x;
+                let dy = by - mouse.y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+
+                let renderX = bx;
+                let renderY = by;
+                let alpha = osc;
+                let isRed = false;
+
+                if (dist < INFLUENCE_RADIUS) {
+                    const factor = 1 - dist / INFLUENCE_RADIUS;
+                    const push = factor * MAX_OFFSET;
+                    const angle = Math.atan2(dy, dx);
+                    renderX += Math.cos(angle) * push;
+                    renderY += Math.sin(angle) * push;
+                    alpha = Math.min(0.85, osc + factor * 0.7);
+                    isRed = true;
+                }
+
+                if (isRed) {
+                    bgCtx.fillStyle = `rgba(255, 45, 61, ${alpha})`;
+                } else {
+                    bgCtx.fillStyle = `rgba(242, 238, 238, ${alpha})`;
+                }
+                bgCtx.fillRect(renderX - DOT_SIZE / 2, renderY - DOT_SIZE / 2, DOT_SIZE, DOT_SIZE);
+            }
+        }
+
+        requestAnimationFrame(renderBg);
+    }
+    resizeBgCanvas();
+    if (!prefersReducedMotion) {
+        requestAnimationFrame(renderBg);
+    }
+
+    /* ── Model Health Status Polling ── */
+    const statusDot = document.getElementById('header-status-dot');
+    async function checkHealth() {
+        if (!navigator.onLine) {
+            setOffline();
+            return;
+        }
+        try {
+            const res = await fetch('/api/health', { cache: 'no-store' });
+            if (!res.ok) throw new Error('Status not ok');
+            const data = await res.json();
+            if (data.status === 'healthy') {
+                if (statusDot) {
+                    statusDot.classList.remove('offline');
+                    statusDot.setAttribute('aria-label', 'Model working');
+                    statusDot.setAttribute('title', 'Model working');
+                }
+            } else {
+                setOffline();
+            }
+        } catch (e) {
+            setOffline();
+        }
+    }
+
+    function setOffline() {
+        if (statusDot) {
+            statusDot.classList.add('offline');
+            statusDot.setAttribute('aria-label', 'Model unavailable');
+            statusDot.setAttribute('title', 'Model unavailable');
+        }
+    }
+
+    window.addEventListener('online', checkHealth);
+    window.addEventListener('offline', setOffline);
+    setInterval(checkHealth, 10000);
+    checkHealth();
+
     /* ── Dark / Light Theme Toggle ── */
     function toggleTheme() {
         const current = document.documentElement.getAttribute('data-theme');

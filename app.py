@@ -382,6 +382,16 @@ async def analyze_audio(file: Optional[UploadFile] = File(None), audio: Optional
         "spectrogram_preview": forensics["spectrogram_preview"]
     }
 
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint polling model and whisper status."""
+    return {
+        "status": "healthy",
+        "model_loaded": classifier is not None or ML_AVAILABLE,
+        "whisper_loaded": whisper_model is not None or ML_AVAILABLE,
+        "version": "v0.9.2"
+    }
+
 @app.get("/api/scam/calls")
 async def get_scam_calls(limit: int = 50, flagged_only: bool = False):
     """Retrieve logged call records from SQLite audit log."""
