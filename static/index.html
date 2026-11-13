@@ -1205,6 +1205,69 @@
                 </div>
             </div>
 
+                        <!-- ──────────────────────────────────────────
+                 3-WAY TELECOM CARRIER BRIDGE (TWILIO LIVE CALL INTERCEPT)
+            ────────────────────────────────────────── -->
+            <div class="card" style="margin-top:20px;border-top:2px solid var(--accent-primary);">
+                <div class="card-header">
+                    <div>
+                        <span class="card-title" style="display:flex;align-items:center;gap:8px;">
+                            <span>3-Way Telecom Call Bridge (No Speakerphone Needed)</span>
+                            <span id="telecom-status-badge" style="font-size:0.75rem;padding:2px 8px;border-radius:12px;background:#dcfce7;color:#15803d;font-weight:600;">Carrier Guard Ready</span>
+                        </span>
+                        <div class="card-meta" style="margin-top:3px;">
+                            The caller dials your virtual shield number &rarr; Twilio immediately connects you both on a normal phone call &rarr; Voice Clone Shield silently monitors the caller in real time.
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:16px;padding:10px 0;">
+                    <div>
+                        <label style="display:block;font-size:0.8rem;font-weight:600;margin-bottom:6px;color:var(--text-secondary);">
+                            Your Personal Phone Number (Where to Forward the Call)
+                        </label>
+                        <div style="display:flex;gap:8px;">
+                            <input type="tel" id="telecom-forwarding-input" class="text-input" placeholder="+91 98765 43210 or +1..." style="flex:1;">
+                            <button class="btn-primary" onclick="saveTelecomConfig()" style="padding:0 16px;">Save</button>
+                        </div>
+                        <div style="font-size:0.75rem;color:var(--text-tertiary);margin-top:4px;">
+                            When someone calls your Twilio number, your personal phone will ring so you can talk and listen.
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="display:block;font-size:0.8rem;font-weight:600;margin-bottom:6px;color:var(--text-secondary);">
+                            Twilio Voice Webhook URL (Paste in Twilio Console)
+                        </label>
+                        <div style="display:flex;gap:8px;">
+                            <input type="text" id="telecom-webhook-url" class="text-input" readonly value="Loading webhook URL..." style="flex:1;background:var(--bg-subtle);font-family:var(--font-mono);font-size:0.75rem;">
+                            <button class="btn-secondary" onclick="copyWebhookUrl()" style="padding:0 14px;">Copy</button>
+                        </div>
+                        <div style="font-size:0.75rem;color:var(--text-tertiary);margin-top:4px;">
+                            Twilio Console &rarr; Phone Numbers &rarr; Configure &rarr; "A CALL COMES IN" &rarr; Webhook (HTTP POST).
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Telecom Call Live Status HUD -->
+                <div id="telecom-live-hud" style="display:none;margin-top:14px;padding:14px;border-radius:var(--radius-sm);background:#fef2f2;border:1px solid #fecaca;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <span style="font-weight:600;color:var(--status-danger);display:flex;align-items:center;gap:6px;">
+                            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--status-danger);animation:pulse 1.2s infinite;"></span>
+                            Active Live Phone Call Intercept
+                        </span>
+                        <span id="telecom-caller-badge" style="font-family:var(--font-mono);font-size:0.8rem;background:white;padding:3px 8px;border-radius:4px;border:1px solid #fca5a5;">Caller: Loading...</span>
+                    </div>
+                    <div style="font-size:0.85rem;margin-bottom:6px;">
+                        <strong>Live Caller Transcript:</strong> <span id="telecom-live-transcript" style="font-style:italic;">Listening to incoming speech...</span>
+                    </div>
+                    <div style="display:flex;gap:12px;font-size:0.8rem;">
+                        <span>Verdict: <strong id="telecom-live-verdict">Evaluating</strong></span>
+                        <span>Threat Score: <strong id="telecom-live-score">0%</strong></span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Scan Log -->
             <div class="card">
                 <div class="card-header">
@@ -2436,7 +2499,133 @@
     window.addEventListener('DOMContentLoaded', () => {
         loadSmsConfig();
     });
-        // Auto-load audit records on launch
+    
+    /* ── Telecom 3-Way Bridge Controls ── */
+    let telecomWs = null;
+
+    async function loadTelecomConfig() {
+        try {
+            const res = await fetch('/api/voice/config');
+            const data = await res.json();
+            const fwdInput = document.getElementById('telecom-forwarding-input');
+            const hookInput = document.getElementById('telecom-webhook-url');
+            if (fwdInput && data.forwarding_phone) fwdInput.value = data.forwarding_phone;
+            if (hookInput && data.webhook_url) hookInput.value = data.webhook_url;
+        } catch (e) {
+            console.error('Failed loading telecom config', e);
+        }
+    }
+
+    async function saveTelecomConfig() {
+        const fwdInput = document.getElementById('telecom-forwarding-input');
+        const val = fwdInput ? fwdInput.value.trim() : '';
+        if (!val) {
+            alert('Please enter your destination mobile phone number (E.164 format, e.g. +919876543210)');
+            return;
+        }
+        try {
+            const res = await fetch('/api/voice/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ forwarding_phone: val })
+            });
+            const data = await res.json();
+            alert('Forwarding destination saved! Incoming calls will ring on: ' + val);
+        } catch (e) {
+            alert('Failed saving config: ' + e.message);
+        }
+    }
+
+    function copyWebhookUrl() {
+        const elem = document.getElementById('telecom-webhook-url');
+        if (!elem) return;
+        elem.select();
+        navigator.clipboard.writeText(elem.value);
+        alert('Copied Twilio Voice Webhook URL: ' + elem.value);
+    }
+
+    function initTelecomWebSocket() {
+        const loc = window.location;
+        const wsProtocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${loc.host}/ws/live-feed`;
+
+        try {
+            telecomWs = new WebSocket(wsUrl);
+            telecomWs.onopen = () => {
+                const badge = document.getElementById('telecom-status-badge');
+                if (badge) {
+                    badge.innerText = 'Carrier Guard Connected';
+                    badge.style.background = '#dcfce7';
+                    badge.style.color = '#15803d';
+                }
+            };
+
+            telecomWs.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleTelecomLiveEvent(data);
+                } catch (err) {
+                    console.error('Error parsing WS event', err);
+                }
+            };
+
+            telecomWs.onclose = () => {
+                setTimeout(initTelecomWebSocket, 3000);
+            };
+        } catch (e) {
+            console.error('WebSocket connection failed', e);
+        }
+    }
+
+    function handleTelecomLiveEvent(data) {
+        const hud = document.getElementById('telecom-live-hud');
+        const callerBadge = document.getElementById('telecom-caller-badge');
+        const transcriptElem = document.getElementById('telecom-live-transcript');
+        const verdictElem = document.getElementById('telecom-live-verdict');
+        const scoreElem = document.getElementById('telecom-live-score');
+
+        if (data.type === 'telecom_call_started') {
+            if (hud) hud.style.display = 'block';
+            if (callerBadge) callerBadge.innerText = `Caller: ${data.caller}`;
+            if (transcriptElem) transcriptElem.innerText = 'Call answered. Listening to incoming speech...';
+        } else if (data.type === 'telecom_chunk_analyzed') {
+            if (hud) hud.style.display = 'block';
+            if (callerBadge) callerBadge.innerText = `Caller: ${data.caller}`;
+            if (transcriptElem && data.transcript) transcriptElem.innerText = `"${data.transcript}"`;
+            if (verdictElem) verdictElem.innerText = data.composite_verdict;
+            if (scoreElem) {
+                scoreElem.innerText = data.threat_score + '%';
+                scoreElem.style.color = data.is_fake ? 'var(--status-danger)' : 'var(--status-safe)';
+            }
+
+            // Sync with rolling timeline chart
+            threatHistory.push({ score: data.threat_score, isFake: data.is_fake, time: new Date() });
+            if (threatHistory.length > 20) threatHistory.shift();
+            drawThreatChart();
+
+            // Append to forensic scan table
+            appendScanLogRow({ transcript: data.transcript }, data.threat_score, data.is_fake);
+
+            // If voice clone or active scam, trigger alarm!
+            if (data.is_fake || data.composite_verdict === 'CRITICAL_AI_SCAM' || data.composite_verdict === 'HUMAN_FRAUD_CALL') {
+                triggerCallAlarm(data.threat_score);
+            }
+
+            // Auto-refresh Fraud Audit
+            if (typeof refreshDashboard === 'function') {
+                refreshDashboard();
+            }
+        } else if (data.type === 'telecom_call_ended') {
+            if (transcriptElem) transcriptElem.innerText = 'Call disconnected. Session logged.';
+            setTimeout(() => {
+                if (hud) hud.style.display = 'none';
+            }, 6000);
+        }
+    }
+
+    loadTelecomConfig();
+    initTelecomWebSocket();
+    // Auto-load audit records on launch
     setTimeout(() => { if (typeof refreshDashboard === 'function') refreshDashboard(); }, 500);
     </script>
 </body>

@@ -18,6 +18,9 @@ from faster_whisper import WhisperModel
 from scam_detector import analyze_transcript
 import db
 import sms_service
+import telecom_bridge
+import json
+from fastapi import Request, WebSocket, WebSocketDisconnect
 
 app = FastAPI(title="Voice Clone Shield")
 
@@ -381,6 +384,189 @@ async def test_sms_alert(payload: Optional[dict] = None):
 async def get_sms_alert_logs(limit: int = 25):
     """Retrieve recent automated SMS alert dispatch records."""
     return sms_service.get_dispatch_logs(limit=limit)
+
+
+
+# ── Telecom 3-Way Live Call Bridge (Twilio Voice Streams) ──
+active_web_clients = set()
+
+async def broadcast_live_event(event_data: dict):
+    for ws in list(active_web_clients):
+        try:
+            await ws.send_json(event_data)
+        except Exception:
+            active_web_clients.discard(ws)
+
+@app.websocket("/ws/live-feed")
+async def live_feed_ws(websocket: WebSocket):
+    await websocket.accept()
+    active_web_clients.add(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        active_web_clients.discard(websocket)
+
+@app.post("/api/voice/incoming")
+async def handle_incoming_voice_call(request: Request):
+    """
+    Twilio hits this webhook when someone calls your virtual number.
+    Returns TwiML that silently forks audio to /api/voice/stream while bridging to your phone.
+    """
+    form = await request.form()
+    caller = form.get("From", "Unknown Caller")
+    base_url = str(request.base_url)
+    return telecom_bridge.generate_twiml_bridge_response(base_url, caller_number=caller)
+
+@app.post("/api/voice/status")
+async def handle_voice_status(request: Request):
+    form = await request.form()
+    call_sid = form.get("CallSid")
+    call_status = form.get("CallStatus")
+    print(f"[Telecom Bridge] Call {call_sid} status update: {call_status}")
+    return {"status": "received"}
+
+@app.get("/api/voice/config")
+async def get_voice_telecom_config(request: Request):
+    cfg = telecom_bridge.get_telecom_config()
+    base_url = str(request.base_url).rstrip("/")
+    cfg["webhook_url"] = f"{base_url}/api/voice/incoming"
+    clean_host = base_url.split("://")[-1] if "://" in base_url else base_url
+    cfg["stream_url"] = f"wss://{clean_host}/api/voice/stream"
+    return cfg
+
+@app.post("/api/voice/config")
+async def update_voice_telecom_config(payload: dict):
+    updated = telecom_bridge.update_telecom_config(
+        forwarding_phone=payload.get("forwarding_phone"),
+        twilio_phone=payload.get("twilio_phone"),
+        whisper_alert_enabled=payload.get("whisper_alert_enabled")
+    )
+    return {"status": "success", "config": updated}
+
+@app.websocket("/api/voice/stream")
+async def handle_twilio_voice_stream(websocket: WebSocket):
+    """
+    Bi-directional media stream connection directly from Twilio.
+    Passively monitors incoming audio over WebSockets in real time.
+    """
+    await websocket.accept()
+    session = None
+    try:
+        while True:
+            message = await websocket.receive_text()
+            data = json.loads(message)
+            event = data.get("event")
+
+            if event == "start":
+                start_info = data.get("start", {})
+                stream_sid = data.get("streamSid")
+                call_sid = start_info.get("callSid")
+                custom_params = start_info.get("customParameters", {})
+                caller = custom_params.get("caller", "Unknown")
+                session = telecom_bridge.TelecomStreamSession(stream_sid, call_sid, caller)
+                print(f"[Telecom Stream] Started session: {stream_sid} for caller {caller}")
+                await broadcast_live_event({
+                    "type": "telecom_call_started",
+                    "caller": caller,
+                    "call_sid": call_sid
+                })
+
+            elif event == "media":
+                if session and session.is_active:
+                    payload = data.get("media", {}).get("payload")
+                    if payload:
+                        session.append_payload(payload)
+
+                        # Process speech every 3.5 seconds
+                        if session.should_process_chunk():
+                            pcm_chunk = session.extract_pcm_chunk()
+                            if pcm_chunk is not None and len(pcm_chunk) > 8000:
+                                # 1. Neural classification
+                                preds = classifier({"raw": pcm_chunk, "sampling_rate": 16000})
+                                scores = {p["label"].lower(): p["score"] for p in preds}
+                                fake_score = scores.get("fake", 0.0)
+                                is_fake = fake_score > 0.5
+
+                                # 2. Acoustic Forensics
+                                forensics = extract_librosa_forensics(pcm_chunk, 16000)
+
+                                # 3. Faster-Whisper Transcription
+                                speech = transcribe_audio_snippet(pcm_chunk, 16000)
+
+                                # 4. NLP Scam & Extortion Screening
+                                scam_analysis = analyze_transcript(speech["transcript"], language=speech.get("language", "en"))
+
+                                # 5. Composite Verdict
+                                if is_fake and scam_analysis["is_scam"]:
+                                    composite_verdict = "CRITICAL_AI_SCAM"
+                                elif is_fake:
+                                    composite_verdict = "DEEPFAKE_VOICE"
+                                elif scam_analysis["is_scam"]:
+                                    composite_verdict = "HUMAN_FRAUD_CALL"
+                                else:
+                                    composite_verdict = "AUTHENTIC_SAFE"
+
+                                # 6. Database Persistence
+                                call_id = None
+                                try:
+                                    call_id = db.log_call(
+                                        verdict="DEEPFAKE_CLONE" if is_fake else "AUTHENTIC_HUMAN",
+                                        composite_verdict=composite_verdict,
+                                        threat_score=round(fake_score * 100, 1),
+                                        scam_score=float(scam_analysis.get("scam_score", 0.0)),
+                                        risk_level=str(scam_analysis.get("risk_level", "SAFE")),
+                                        primary_category=scam_analysis.get("primary_category") or "Live Telecom Call",
+                                        detected_language=speech.get("language", "en"),
+                                        transcript=speech.get("transcript", ""),
+                                        matched_keywords=scam_analysis.get("matched_keywords", []),
+                                        urgency_markers=scam_analysis.get("urgency_markers", []),
+                                        duration=3.5,
+                                        acoustic_data={
+                                            "pitch_f0_hz": forensics["pitch_f0_hz"],
+                                            "spectral_centroid_hz": forensics["spectral_centroid_hz"],
+                                            "spectral_flatness": forensics["spectral_flatness"]
+                                        },
+                                        caller_label=f"Telecom Call ({session.caller_phone})"
+                                    )
+                                except Exception as dbe:
+                                    print(f"Telecom DB log warning: {dbe}")
+
+                                # 7. Automated SMS Alert if active threat
+                                if scam_analysis.get("is_scam") or is_fake:
+                                    try:
+                                        sms_service.send_scam_alert_sms(
+                                            call_id=str(call_id or session.call_sid),
+                                            scam_analysis=scam_analysis,
+                                            is_fake_voice=is_fake
+                                        )
+                                    except Exception as smse:
+                                        print(f"Telecom SMS error: {smse}")
+
+                                # 8. Broadcast live telemetry to connected UI dashboards
+                                await broadcast_live_event({
+                                    "type": "telecom_chunk_analyzed",
+                                    "caller": session.caller_phone,
+                                    "is_fake": is_fake,
+                                    "threat_score": round(fake_score * 100, 1),
+                                    "transcript": speech.get("transcript", ""),
+                                    "composite_verdict": composite_verdict,
+                                    "risk_level": scam_analysis.get("risk_level", "SAFE"),
+                                    "call_id": call_id
+                                })
+
+            elif event == "stop":
+                print(f"[Telecom Stream] Session stopped for {session.stream_sid if session else unknown}")
+                await broadcast_live_event({
+                    "type": "telecom_call_ended",
+                    "caller": session.caller_phone if session else "Unknown"
+                })
+                break
+
+    except WebSocketDisconnect:
+        print("[Telecom Stream] WebSocket disconnected by Twilio")
+    except Exception as e:
+        print(f"[Telecom Stream] Error: {e}")
 
 
 @app.get("/api/samples/{sample_name}")
