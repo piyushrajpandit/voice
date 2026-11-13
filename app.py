@@ -843,7 +843,8 @@ async def handle_scammer_call_ws(websocket: WebSocket):
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
     with open(os.path.join(STATIC_DIR, "index.html"), "r", encoding="utf-8") as f:
-        return f.read()
+        content = f.read()
+    return HTMLResponse(content=content, headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache"})
 
 @app.get("/privacy", response_class=HTMLResponse)
 async def serve_privacy():

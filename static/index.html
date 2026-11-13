@@ -1032,32 +1032,6 @@
             border: 1px solid var(--border-subtle);
         }
 
-        /* ── Data Governance Section ── */
-        .governance-section {
-            margin-top: 64px;
-            border-top: 1px solid var(--border-subtle);
-            padding-top: 48px;
-        }
-
-        .governance-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 32px;
-            margin-top: 24px;
-        }
-
-        .governance-item h3 {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 6px;
-        }
-
-        .governance-item p {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            line-height: 1.5;
-        }
 
         /* ── Site Footer ── */
         .site-footer {
@@ -1125,9 +1099,6 @@
             }
             .kpi-row {
                 grid-template-columns: repeat(2, 1fr);
-            }
-            .governance-grid {
-                grid-template-columns: 1fr;
             }
             .site-footer {
                 flex-direction: column;
@@ -1618,26 +1589,6 @@
                 <div id="sandbox-output" class="section-box" style="display:none;background:var(--bg-subtle);"></div>
             </div>
         </div>
-
-        <!-- ──────────────────────────────────────────
-             DATA GOVERNANCE & PRIVACY
-        ────────────────────────────────────────── -->
-        <section class="governance-section" id="data-practices">
-            <div class="hero-tagline">Architectural Principles</div>
-            <h2 style="font-size:1.5rem;font-weight:600;letter-spacing:-0.02em;margin-bottom:8px;">Data Protection and Privacy</h2>
-            <p style="color:var(--text-secondary);max-width:700px;">Voice Clone Shield is engineered with local-first processing principles to ensure voice privacy.</p>
-
-            <div class="governance-grid">
-                <div class="governance-item">
-                    <h3>Ephemeral Memory Processing</h3>
-                    <p>Microphone audio streams and uploaded recordings are processed directly within application memory on the local server. Raw voice recordings are not transferred to external advertising networks or model-training providers.</p>
-                </div>
-                <div class="governance-item">
-                    <h3>Local Audit Retention Control</h3>
-                    <p>Verification metrics and transcript snippets are stored locally in SQLite (<code>calls.db</code>). System administrators can purge the entire incident history with a single action using the Wipe History control.</p>
-                </div>
-            </div>
-        </section>
 
         <!-- Site Footer -->
         <footer class="site-footer">
