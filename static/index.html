@@ -491,7 +491,21 @@
             overflow: hidden;
         }
 
-        #live-waveform-canvas {
+        .call-waveform-wrap {
+            width: 100%;
+            height: 28px;
+            margin-top: 18px;
+            margin-bottom: 8px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 0 4px;
+        }
+
+        #live-waveform-canvas,
+        #call-waveform-canvas {
             width: 100%;
             height: 28px;
             display: block;
@@ -1309,16 +1323,14 @@
                         <span class="card-meta" id="live-badge">Idle</span>
                     </div>
 
-                    <ol class="step-list">
-                        <li class="step-item">Receive the incoming call on your telephone device.</li>
-                        <li class="step-item">Activate speakerphone mode so audio plays aloud.</li>
-                        <li class="step-item">Click Start Monitoring below. Microphone buffers incoming speech.</li>
-                        <li class="step-item">Results update every 4 seconds with rolling biometric analysis.</li>
-                    </ol>
-
                     <button class="btn-primary" id="call-btn" onclick="toggleCallMonitor()">
                         <span id="call-btn-text">Start Call Monitoring</span>
                     </button>
+
+                    <!-- Live Voice Amplitude Waveform for Call Monitoring -->
+                    <div class="call-waveform-wrap" id="call-waveform-wrap" aria-hidden="true">
+                        <canvas id="call-waveform-canvas"></canvas>
+                    </div>
 
                     <div id="chunk-timer-row" style="display:none;margin-top:14px;font-size:0.82rem;color:var(--text-secondary);text-align:center;">
                         Next sample analysis in <span id="ring-countdown" style="font-weight:600;color:var(--text-primary);">4</span>s
@@ -1348,15 +1360,10 @@
             ────────────────────────────────────────── -->
             <div class="card" style="margin-top:20px;border-top:2px solid var(--accent-primary);">
                 <div class="card-header">
-                    <div>
-                        <span class="card-title" style="display:flex;align-items:center;gap:8px;">
-                            <span>3-Way Telecom Call Bridge (No Speakerphone Needed)</span>
-                            <span id="telecom-status-badge" style="font-size:0.75rem;padding:2px 8px;border-radius:12px;background:#dcfce7;color:#15803d;font-weight:600;">Carrier Guard Ready</span>
-                        </span>
-                        <div class="card-meta" style="margin-top:3px;">
-                            The caller dials your virtual shield number &rarr; Twilio immediately connects you both on a normal phone call &rarr; Voice Clone Shield silently monitors the caller in real time.
-                        </div>
-                    </div>
+                    <span class="card-title" style="display:flex;align-items:center;gap:8px;">
+                        <span>3-Way Telecom Call Bridge (No Speakerphone Needed)</span>
+                        <span id="telecom-status-badge" style="font-size:0.75rem;padding:2px 8px;border-radius:12px;background:#dcfce7;color:#15803d;font-weight:600;">Carrier Guard Ready</span>
+                    </span>
                 </div>
 
                 <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:16px;padding:10px 0;">
@@ -1368,9 +1375,6 @@
                             <input type="tel" id="telecom-forwarding-input" class="text-input" placeholder="+91 98765 43210 or +1..." style="flex:1;">
                             <button class="btn-primary" onclick="saveTelecomConfig()" style="padding:0 16px;">Save</button>
                         </div>
-                        <div style="font-size:0.75rem;color:var(--text-tertiary);margin-top:4px;">
-                            When someone calls your Twilio number, your personal phone will ring so you can talk and listen.
-                        </div>
                     </div>
 
                     <div>
@@ -1380,9 +1384,6 @@
                         <div style="display:flex;gap:8px;">
                             <input type="text" id="telecom-webhook-url" class="text-input" readonly value="Loading webhook URL..." style="flex:1;background:var(--bg-subtle);font-family:var(--font-mono);font-size:0.75rem;">
                             <button class="btn-secondary" onclick="copyWebhookUrl()" style="padding:0 14px;">Copy</button>
-                        </div>
-                        <div style="font-size:0.75rem;color:var(--text-tertiary);margin-top:4px;">
-                            Twilio Console &rarr; Phone Numbers &rarr; Configure &rarr; "A CALL COMES IN" &rarr; Webhook (HTTP POST).
                         </div>
                     </div>
                 </div>
@@ -1663,7 +1664,10 @@
             document.getElementById('panel-title').innerText = 'Audio Input';
             document.getElementById('panel-sub').innerText = '16kHz PCM Stream';
         } else if (mode === 'call') {
-            setTimeout(resizeThreatCanvas, 100);
+            setTimeout(() => {
+                resizeThreatCanvas();
+                if (window.callMonitorWaveform) window.callMonitorWaveform.drawBaseline();
+            }, 100);
         } else if (mode === 'scam') {
             refreshDashboard();
         }
@@ -1676,8 +1680,14 @@
         canvas.height = 70;
         drawIdleSpec();
     }
-    window.addEventListener('resize', resizeCanvas);
-    setTimeout(resizeCanvas, 100);
+    window.addEventListener('resize', () => {
+        resizeCanvas();
+        if (window.callMonitorWaveform) window.callMonitorWaveform.drawBaseline();
+    });
+    setTimeout(() => {
+        resizeCanvas();
+        if (window.callMonitorWaveform) window.callMonitorWaveform.drawBaseline();
+    }, 150);
 
     function drawIdleSpec() {
         if (!ctx || !canvas) return;
@@ -2015,42 +2025,20 @@
     let liveAudioStream = null;
     let recTimerInterval = null;
     let recSeconds = 0;
-    let waveformAnimId = null;
-    let waveformAnalyser = null;
-    let waveformBarAmps = null;
-    let smoothedGlobalAmp = 0;
 
-    function startWaveformVisualizer(audioCtx, audioSource) {
-        const wrap = document.getElementById('live-waveform-wrap');
-        const canvas = document.getElementById('live-waveform-canvas');
-        if (!wrap || !canvas || !audioCtx || !audioSource) return;
+    function initWaveformVisualizer(canvasId, wrapId) {
+        let animId = null;
+        let analyser = null;
+        let barAmps = null;
+        let smoothedAmp = 0;
+        const canvas = document.getElementById(canvasId);
+        const wrap = document.getElementById(wrapId);
 
-        wrap.style.display = 'flex';
-
-        try {
-            waveformAnalyser = audioCtx.createAnalyser();
-            waveformAnalyser.fftSize = 512;
-            waveformAnalyser.smoothingTimeConstant = 0.3;
-            audioSource.connect(waveformAnalyser);
-        } catch (e) {
-            console.warn('Waveform analyser error:', e);
-            return;
-        }
-
-        const timeData = new Float32Array(waveformAnalyser.fftSize);
-        const numBars = 50;
-        waveformBarAmps = new Float32Array(numBars);
-        smoothedGlobalAmp = 0;
-
-        const ctx = canvas.getContext('2d');
-
-        function renderFrame() {
-            if (!isAudioRecording) return;
-            waveformAnimId = requestAnimationFrame(renderFrame);
-
+        function drawBaseline() {
+            if (!canvas) return;
             const dpr = window.devicePixelRatio || 1;
             const rect = canvas.getBoundingClientRect();
-            const displayW = Math.floor(rect.width) || canvas.parentElement.clientWidth || 360;
+            const displayW = Math.floor(rect.width) || (canvas.parentElement ? canvas.parentElement.clientWidth : 360) || 360;
             const displayH = 28;
 
             if (canvas.width !== displayW * dpr || canvas.height !== displayH * dpr) {
@@ -2058,27 +2046,7 @@
                 canvas.height = displayH * dpr;
             }
 
-            // Real-time time-domain voice amplitude analysis
-            waveformAnalyser.getFloatTimeDomainData(timeData);
-
-            let sumSquares = 0;
-            for (let j = 0; j < timeData.length; j++) {
-                const v = timeData[j];
-                sumSquares += v * v;
-            }
-            const rms = Math.sqrt(sumSquares / timeData.length);
-
-            // Responsive amplitude with ambient silence cutoff
-            const noiseFloor = 0.004;
-            const rawVol = Math.max(0, rms - noiseFloor);
-            const targetVol = Math.min(1.0, Math.pow(rawVol * 5.2, 0.78));
-
-            if (targetVol > smoothedGlobalAmp) {
-                smoothedGlobalAmp += (targetVol - smoothedGlobalAmp) * 0.38;
-            } else {
-                smoothedGlobalAmp += (targetVol - smoothedGlobalAmp) * 0.14;
-            }
-
+            const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.save();
             ctx.scale(dpr, dpr);
@@ -2086,8 +2054,6 @@
             const w = displayW;
             const h = displayH;
             const centerY = h / 2;
-
-            // Electric-blue / cyan styling matching button with blue glow
             const waveColor = '#00d4ff';
             ctx.strokeStyle = waveColor;
             ctx.fillStyle = waveColor;
@@ -2098,6 +2064,7 @@
             const startX = 4 + sideLineLen + 6;
             const endX = w - 4 - sideLineLen - 6;
             const usableWidth = endX - startX;
+            const numBars = 50;
             const step = usableWidth / (numBars - 1);
             const barWidth = 2.5;
 
@@ -2111,76 +2078,179 @@
             ctx.lineTo(w - 4, centerY);
             ctx.stroke();
 
-            // Symmetrically arranged rounded vertical bars
-            const minHeight = 2.0;
-            const maxHeight = 22.0;
-            const chunkSize = Math.max(1, Math.floor(timeData.length / numBars));
-
+            // Symmetrically arranged rounded vertical bars (flat baseline)
             ctx.lineWidth = barWidth;
             ctx.beginPath();
-
             for (let i = 0; i < numBars; i++) {
                 const x = startX + i * step;
-                const u = i / (numBars - 1);
-
-                // Smooth bell envelope: tallest at center, smoothly tapering towards edges
-                const centerEnv = Math.pow(Math.sin(Math.PI * u), 1.2);
-                const weight = 0.05 + 0.95 * centerEnv;
-
-                // Local time-domain chunk amplitude
-                let chunkSum = 0;
-                const startIdx = i * chunkSize;
-                const endIdx = Math.min(timeData.length, startIdx + chunkSize);
-                for (let k = startIdx; k < endIdx; k++) {
-                    chunkSum += timeData[k] * timeData[k];
-                }
-                const chunkRms = Math.sqrt(chunkSum / Math.max(1, endIdx - startIdx));
-                const localVol = Math.min(1.0, Math.max(0, chunkRms - noiseFloor) * 5.2);
-
-                const barTarget = (smoothedGlobalAmp * 0.65) + (localVol * 0.35);
-                if (barTarget > waveformBarAmps[i]) {
-                    waveformBarAmps[i] += (barTarget - waveformBarAmps[i]) * 0.42;
-                } else {
-                    waveformBarAmps[i] += (barTarget - waveformBarAmps[i]) * 0.16;
-                }
-
-                const currentAmp = waveformBarAmps[i];
-                const barH = minHeight + (maxHeight - minHeight) * currentAmp * weight;
-
-                const y1 = centerY - barH / 2;
-                const y2 = centerY + barH / 2;
-
-                ctx.moveTo(x, y1);
-                ctx.lineTo(x, y2);
+                const barH = 2.0;
+                ctx.moveTo(x, centerY - barH / 2);
+                ctx.lineTo(x, centerY + barH / 2);
             }
             ctx.stroke();
-
             ctx.restore();
         }
 
-        waveformAnimId = requestAnimationFrame(renderFrame);
+        function start(audioCtx, audioSource, checkActiveFn) {
+            if (!wrap || !canvas || !audioCtx || !audioSource) return;
+            wrap.style.display = 'flex';
+
+            try {
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 512;
+                analyser.smoothingTimeConstant = 0.3;
+                audioSource.connect(analyser);
+            } catch (e) {
+                console.warn('Waveform analyser error:', e);
+                return;
+            }
+
+            const timeData = new Float32Array(analyser.fftSize);
+            const numBars = 50;
+            barAmps = new Float32Array(numBars);
+            smoothedAmp = 0;
+            const ctx = canvas.getContext('2d');
+
+            function renderFrame() {
+                if (checkActiveFn && !checkActiveFn()) {
+                    stop();
+                    return;
+                }
+                animId = requestAnimationFrame(renderFrame);
+
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                const displayW = Math.floor(rect.width) || (canvas.parentElement ? canvas.parentElement.clientWidth : 360) || 360;
+                const displayH = 28;
+
+                if (canvas.width !== displayW * dpr || canvas.height !== displayH * dpr) {
+                    canvas.width = displayW * dpr;
+                    canvas.height = displayH * dpr;
+                }
+
+                // Real-time time-domain voice amplitude analysis
+                analyser.getFloatTimeDomainData(timeData);
+
+                let sumSquares = 0;
+                for (let j = 0; j < timeData.length; j++) {
+                    const v = timeData[j];
+                    sumSquares += v * v;
+                }
+                const rms = Math.sqrt(sumSquares / timeData.length);
+
+                const noiseFloor = 0.004;
+                const rawVol = Math.max(0, rms - noiseFloor);
+                const targetVol = Math.min(1.0, Math.pow(rawVol * 5.2, 0.78));
+
+                if (targetVol > smoothedAmp) {
+                    smoothedAmp += (targetVol - smoothedAmp) * 0.38;
+                } else {
+                    smoothedAmp += (targetVol - smoothedAmp) * 0.14;
+                }
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.save();
+                ctx.scale(dpr, dpr);
+
+                const w = displayW;
+                const h = displayH;
+                const centerY = h / 2;
+                const waveColor = '#00d4ff';
+                ctx.strokeStyle = waveColor;
+                ctx.fillStyle = waveColor;
+                ctx.shadowColor = 'rgba(0, 212, 255, 0.75)';
+                ctx.shadowBlur = 8;
+
+                const sideLineLen = Math.max(16, Math.min(36, Math.round(w * 0.07)));
+                const startX = 4 + sideLineLen + 6;
+                const endX = w - 4 - sideLineLen - 6;
+                const usableWidth = endX - startX;
+                const step = usableWidth / (numBars - 1);
+                const barWidth = 2.5;
+
+                ctx.lineWidth = 1.5;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(4, centerY);
+                ctx.lineTo(startX - 4, centerY);
+                ctx.moveTo(endX + 4, centerY);
+                ctx.lineTo(w - 4, centerY);
+                ctx.stroke();
+
+                const minHeight = 2.0;
+                const maxHeight = 22.0;
+                const chunkSize = Math.max(1, Math.floor(timeData.length / numBars));
+
+                ctx.lineWidth = barWidth;
+                ctx.beginPath();
+
+                for (let i = 0; i < numBars; i++) {
+                    const x = startX + i * step;
+                    const u = i / (numBars - 1);
+                    const centerEnv = Math.pow(Math.sin(Math.PI * u), 1.2);
+                    const weight = 0.05 + 0.95 * centerEnv;
+
+                    let chunkSum = 0;
+                    const startIdx = i * chunkSize;
+                    const endIdx = Math.min(timeData.length, startIdx + chunkSize);
+                    for (let k = startIdx; k < endIdx; k++) {
+                        chunkSum += timeData[k] * timeData[k];
+                    }
+                    const chunkRms = Math.sqrt(chunkSum / Math.max(1, endIdx - startIdx));
+                    const localVol = Math.min(1.0, Math.max(0, chunkRms - noiseFloor) * 5.2);
+
+                    const barTarget = (smoothedAmp * 0.65) + (localVol * 0.35);
+                    if (barTarget > barAmps[i]) {
+                        barAmps[i] += (barTarget - barAmps[i]) * 0.42;
+                    } else {
+                        barAmps[i] += (barTarget - barAmps[i]) * 0.16;
+                    }
+
+                    const currentAmp = barAmps[i];
+                    const barH = minHeight + (maxHeight - minHeight) * currentAmp * weight;
+
+                    const y1 = centerY - barH / 2;
+                    const y2 = centerY + barH / 2;
+
+                    ctx.moveTo(x, y1);
+                    ctx.lineTo(x, y2);
+                }
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            animId = requestAnimationFrame(renderFrame);
+        }
+
+        function stop(hide = false) {
+            if (animId) {
+                cancelAnimationFrame(animId);
+                animId = null;
+            }
+            if (analyser) {
+                try { analyser.disconnect(); } catch (e) {}
+                analyser = null;
+            }
+            if (hide && wrap) {
+                wrap.style.display = 'none';
+            } else {
+                drawBaseline();
+            }
+        }
+
+        return { start, stop, drawBaseline };
+    }
+
+    const audioInputWaveform = initWaveformVisualizer('live-waveform-canvas', 'live-waveform-wrap');
+    const callMonitorWaveform = initWaveformVisualizer('call-waveform-canvas', 'call-waveform-wrap');
+    window.callMonitorWaveform = callMonitorWaveform;
+
+    function startWaveformVisualizer(audioCtx, audioSource) {
+        audioInputWaveform.start(audioCtx, audioSource, () => isAudioRecording);
     }
 
     function stopWaveformVisualizer() {
-        if (waveformAnimId) {
-            cancelAnimationFrame(waveformAnimId);
-            waveformAnimId = null;
-        }
-        if (waveformAnalyser) {
-            try {
-                waveformAnalyser.disconnect();
-            } catch (e) {}
-            waveformAnalyser = null;
-        }
-        const wrap = document.getElementById('live-waveform-wrap');
-        if (wrap) {
-            wrap.style.display = 'none';
-        }
-        const canvas = document.getElementById('live-waveform-canvas');
-        if (canvas) {
-            const ctx = canvas.getContext('2d');
-            if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
+        audioInputWaveform.stop(true);
     }
 
     async function toggleAudioRecording() {
@@ -2334,6 +2404,8 @@
             badge.style.color = 'var(--text-tertiary)';
             timerRow.style.display = 'none';
 
+            callMonitorWaveform.stop(false);
+
             if (callStream) {
                 callStream.getTracks().forEach(t => t.stop());
                 callStream = null;
@@ -2365,6 +2437,11 @@
                 callPcmSource.connect(callPcmProcessor);
                 callPcmProcessor.connect(callPcmCtx.destination);
 
+                if (callPcmCtx.state === 'suspended') {
+                    await callPcmCtx.resume();
+                }
+                callMonitorWaveform.start(callPcmCtx, callPcmSource, () => callMonitorActive);
+
                 callCountdown = 4;
                 callTimerInterval = setInterval(async () => {
                     callCountdown--;
@@ -2377,6 +2454,8 @@
                     }
                 }, 1000);
             } catch (err) {
+                callMonitorActive = false;
+                callMonitorWaveform.stop(false);
                 alert('Microphone access required: ' + err.message);
             }
         }
@@ -2931,6 +3010,7 @@
     initTelecomWebSocket();
     // Auto-load audit records on launch
     setTimeout(() => { if (typeof refreshDashboard === 'function') refreshDashboard(); }, 500);
+    setTimeout(() => { if (window.callMonitorWaveform) window.callMonitorWaveform.drawBaseline(); }, 200);
     </script>
 </body>
 </html>
