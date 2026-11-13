@@ -29,7 +29,7 @@ except Exception as e:
     WhisperModel = None
 
 from fastapi import FastAPI, File, UploadFile, Form
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from scam_detector import analyze_transcript, warmup_models
@@ -855,6 +855,28 @@ async def serve_privacy():
 async def serve_terms():
     with open(os.path.join(STATIC_DIR, "terms.html"), "r", encoding="utf-8") as f:
         return f.read()
+
+@app.get("/manifest.json")
+async def serve_manifest():
+    return FileResponse(
+        os.path.join(STATIC_DIR, "manifest.json"),
+        media_type="application/manifest+json"
+    )
+
+@app.get("/sw.js")
+async def serve_sw():
+    return FileResponse(
+        os.path.join(STATIC_DIR, "sw.js"),
+        media_type="application/javascript",
+        headers={"Service-Worker-Allowed": "/"}
+    )
+
+@app.get("/favicon.ico")
+async def serve_favicon():
+    return FileResponse(
+        os.path.join(STATIC_DIR, "icons", "icon-32.png"),
+        media_type="image/png"
+    )
 
 if __name__ == "__main__":
     import uvicorn

@@ -2,8 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
     <meta name="description" content="Real-time synthetic speech verification, deepfake audio detection, and conversational fraud prevention.">
+    
+    <!-- PWA & Mobile Web App Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0071e3">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="VoiceShield">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/icon-180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/icon-32.png">
     <title>Voice Clone Shield</title>
     <script>
         (function() {
@@ -307,6 +319,123 @@
         }
         [data-theme="dark"] .theme-toggle-btn .moon-icon {
             display: none;
+        }
+
+        /* ── PWA Installation Styles ── */
+        .nav-install-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 12px;
+            border-radius: var(--radius-md);
+            border: 1px solid rgba(0, 113, 227, 0.35);
+            background: rgba(0, 113, 227, 0.12);
+            color: var(--accent-primary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .nav-install-btn:hover {
+            background: rgba(0, 113, 227, 0.22);
+            border-color: var(--accent-primary);
+            transform: translateY(-1px);
+        }
+        [data-theme="dark"] .nav-install-btn {
+            background: rgba(56, 189, 248, 0.15);
+            border-color: rgba(56, 189, 248, 0.35);
+            color: #38bdf8;
+        }
+
+        .pwa-mobile-banner {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 32px);
+            max-width: 440px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-strong);
+            border-radius: 18px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08);
+            z-index: 9999;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            animation: pwaSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes pwaSlideUp {
+            from { opacity: 0; transform: translate(-50%, 40px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+        .pwa-banner-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 0;
+        }
+        .pwa-banner-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            flex-shrink: 0;
+        }
+        .pwa-banner-text {
+            min-width: 0;
+        }
+        .pwa-banner-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+        .pwa-banner-sub {
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.3;
+            margin-top: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .pwa-banner-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .pwa-btn-primary {
+            background: var(--accent-primary);
+            color: #fff;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .pwa-btn-primary:hover {
+            filter: brightness(1.1);
+        }
+        .pwa-btn-dismiss {
+            background: transparent;
+            border: none;
+            color: var(--text-tertiary);
+            font-size: 14px;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 8px;
+            transition: color 0.15s;
+        }
+        .pwa-btn-dismiss:hover {
+            color: var(--text-primary);
         }
 
         /* ── Main Layout ── */
@@ -1147,6 +1276,14 @@
 
             <!-- Navbar Actions & Theme Toggle -->
             <div class="nav-actions">
+                <button class="nav-install-btn" id="pwa-install-nav-btn" onclick="triggerPWAInstall()" aria-label="Install App" title="Install VoiceShield App on Phone" style="display: none;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Install App</span>
+                </button>
                 <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">
                     <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="12" cy="12" r="5"></circle>
@@ -3011,6 +3148,98 @@
     // Auto-load audit records on launch
     setTimeout(() => { if (typeof refreshDashboard === 'function') refreshDashboard(); }, 500);
     setTimeout(() => { if (window.callMonitorWaveform) window.callMonitorWaveform.drawBaseline(); }, 200);
+
+    // ── PWA Service Worker & Install Prompt Logic ──
+    let deferredPrompt = null;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                .then(reg => console.log('[PWA] Service Worker registered:', reg.scope))
+                .catch(err => console.log('[PWA] Service Worker registration failed:', err));
+        });
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // Show navbar button and mobile banner if not dismissed before
+        const navBtn = document.getElementById('pwa-install-nav-btn');
+        if (navBtn) navBtn.style.display = 'inline-flex';
+        
+        if (!sessionStorage.getItem('pwa_banner_dismissed') && !isStandalone) {
+            const banner = document.getElementById('pwa-mobile-banner');
+            if (banner) banner.style.display = 'flex';
+        }
+    });
+
+    window.addEventListener('appinstalled', () => {
+        console.log('[PWA] App successfully installed!');
+        deferredPrompt = null;
+        const navBtn = document.getElementById('pwa-install-nav-btn');
+        if (navBtn) navBtn.style.display = 'none';
+        const banner = document.getElementById('pwa-mobile-banner');
+        if (banner) banner.style.display = 'none';
+    });
+
+    // Handle iOS Safari Add to Home Screen instructions
+    if (isIOS && !isStandalone && !sessionStorage.getItem('pwa_banner_dismissed')) {
+        setTimeout(() => {
+            const banner = document.getElementById('pwa-mobile-banner');
+            const desc = document.getElementById('pwa-banner-desc');
+            const btn = document.getElementById('pwa-banner-install-btn');
+            if (banner && desc && btn) {
+                desc.innerText = 'Tap Share [↑] then "Add to Home Screen"';
+                btn.innerText = 'How to Add';
+                btn.onclick = () => {
+                    alert('To install VoiceShield on iPhone/iPad:\n1. Tap the Share button (square with arrow ↑) at the bottom of Safari.\n2. Scroll down and tap "Add to Home Screen".');
+                };
+                banner.style.display = 'flex';
+            }
+        }, 1500);
+    }
+
+    function triggerPWAInstall() {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('[PWA] User accepted installation prompt');
+                }
+                deferredPrompt = null;
+                const banner = document.getElementById('pwa-mobile-banner');
+                if (banner) banner.style.display = 'none';
+            });
+        } else if (isIOS) {
+            alert('To install VoiceShield on iPhone/iPad:\n1. Tap the Share button (square with arrow ↑) at the bottom of Safari.\n2. Scroll down and tap "Add to Home Screen".');
+        } else {
+            alert('To install this app on your phone:\nTap your browser menu (⋮) and select "Install app" or "Add to Home Screen".');
+        }
+    }
+
+    function dismissPWABanner() {
+        const banner = document.getElementById('pwa-mobile-banner');
+        if (banner) banner.style.display = 'none';
+        sessionStorage.setItem('pwa_banner_dismissed', 'true');
+    }
     </script>
+
+    <!-- Floating Mobile PWA Install Banner -->
+    <div id="pwa-mobile-banner" class="pwa-mobile-banner" style="display: none;">
+        <div class="pwa-banner-content">
+            <img src="/static/icons/icon-192.png" alt="VoiceShield" class="pwa-banner-icon">
+            <div class="pwa-banner-text">
+                <div class="pwa-banner-title">Install VoiceShield</div>
+                <div class="pwa-banner-sub" id="pwa-banner-desc">Add to Home Screen for instant phone protection</div>
+            </div>
+        </div>
+        <div class="pwa-banner-actions">
+            <button id="pwa-banner-install-btn" class="pwa-btn-primary" onclick="triggerPWAInstall()">Install</button>
+            <button class="pwa-btn-dismiss" onclick="dismissPWABanner()" aria-label="Dismiss">✕</button>
+        </div>
+    </div>
 </body>
 </html>
