@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scammer Demo Calling Terminal</title>
+    <style>
+        :root {
+            --bg-page: #09090b;
+            --bg-card: #18181b;
+            --border: #27272a;
+            --accent: #22c55e;
+            --danger: #ef4444;
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body {
+            background: var(--bg-page);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .phone-case {
+            width: 100%;
+            max-width: 400px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 36px;
+            padding: 30px 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: #27272a;
+            color: #fbbf24;
+            margin-bottom: 10px;
+        }
+        .number-display {
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            margin-bottom: 4px;
+        }
+        .status-line {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+        }
+        .status-dot.active {
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+        }
+        .status-dot.incall {
+            background: var(--danger);
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+        .call-actions {
+            display: flex;
+            justify-content: center;
+            margin: 24px 0 20px;
+        }
+        .call-btn {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            border: none;
+            background: var(--accent);
+            color: white;
+            font-size: 1.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 20px rgba(34, 197, 94, 0.4);
+            transition: all 0.2s;
+        }
+        .call-btn:hover { transform: scale(1.05); }
+        .call-btn.incall {
+            background: var(--danger);
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4);
+        }
+
+        .presets-section {
+            background: #141416;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 14px;
+            margin-top: 18px;
+        }
+        .presets-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .preset-btn {
+            width: 100%;
+            text-align: left;
+            background: #1f1f23;
+            border: 1px solid #2d2d32;
+            color: var(--text-main);
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .preset-btn:hover {
+            background: #27272e;
+            border-color: #3f3f46;
+        }
+        .preset-btn span.badge-tag {
+            font-size: 0.68rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #ef444422;
+            color: #ef4444;
+            font-weight: 600;
+        }
+        .mic-box {
+            text-align: center;
+            padding: 12px;
+            background: #1c1917;
+            border: 1px solid #44403c;
+            border-radius: 12px;
+            margin-top: 14px;
+            font-size: 0.78rem;
+            color: #d6d3d1;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-case">
+        <div class="header">
+            <div class="badge">Attacker / Scammer Simulator</div>
+            <div class="number-display">+1 (412) 754-7405</div>
+            <div class="status-line">
+                <span class="status-dot active" id="dot"></span>
+                <span id="call-status">Ready to place demo call</span>
+            </div>
+        </div>
+
+        <div class="call-actions">
+            <button class="call-btn" id="main-call-btn" onclick="toggleCall()">📞</button>
+        </div>
+
+        <div id="live-mic-indicator" style="display:none;text-align:center;color:#ef4444;font-size:0.8rem;font-weight:600;margin-bottom:12px;">
+            🎙️ Live Scammer Microphone Active (Speak Now)
+        </div>
+
+        <div class="presets-section">
+            <div class="presets-title">1-Click AI Clone Attack Scenarios</div>
+            <button class="preset-btn" onclick="transmitScenario('bail_scam')">
+                <span>🚨 AI Grandparent Bail Scam</span>
+                <span class="badge-tag">English &middot; Extortion</span>
+            </button>
+            <button class="preset-btn" onclick="transmitScenario('police_arrest')">
+                <span>👮 Police Arrest Scam</span>
+                <span class="badge-tag">Hindi &middot; Extortion</span>
+            </button>
+            <button class="preset-btn" onclick="transmitScenario('bank_otp')">
+                <span>🏦 Banking OTP Phishing</span>
+                <span class="badge-tag">Hindi &middot; OTP Theft</span>
+            </button>
+            <button class="preset-btn" onclick="transmitScenario('benign')">
+                <span>👨‍👩‍👧 Normal Family Call</span>
+                <span class="badge-tag" style="background:#22c55e22;color:#22c55e;">Safe &middot; Human</span>
+            </button>
+        </div>
+
+        <div class="mic-box">
+            Tip: You can open this page on your phone via your public tunnel link and click <strong>Call</strong> while presenting your laptop dashboard!
+        </div>
+    </div>
+
+    <script>
+    let inCall = false;
+    let ws = null;
+    let callTimer = null;
+    let seconds = 0;
+    let audioStream = null;
+    let audioCtx = null;
+    let processor = null;
+
+    function initWs() {
+        const loc = window.location;
+        const proto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${proto}//${loc.host}/ws/scammer-call`);
+        ws.onopen = () => console.log('Scammer call channel connected');
+        ws.onclose = () => setTimeout(initWs, 2000);
+    }
+    initWs();
+
+    async function toggleCall() {
+        if (!inCall) {
+            startCall();
+        } else {
+            endCall();
+        }
+    }
+
+    async function startCall() {
+        inCall = true;
+        seconds = 0;
+        document.getElementById('main-call-btn').classList.add('incall');
+        document.getElementById('main-call-btn').innerText = '📵';
+        document.getElementById('dot').className = 'status-dot incall';
+        document.getElementById('call-status').innerText = 'Connected (00:00)';
+        document.getElementById('live-mic-indicator').style.display = 'block';
+
+        callTimer = setInterval(() => {
+            seconds++;
+            const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+            const s = String(seconds % 60).padStart(2, '0');
+            document.getElementById('call-status').innerText = `Connected (${m}:${s})`;
+        }, 1000);
+
+        // Notify backend of incoming call
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'start_call', caller: '+1 (555) 392-8192' }));
+        }
+
+        // Start live scammer microphone
+        try {
+            audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+            const source = audioCtx.createMediaStreamSource(audioStream);
+            processor = audioCtx.createScriptProcessor(4096, 1, 1);
+            let chunks = [];
+
+            processor.onaudioprocess = (e) => {
+                if (!inCall) return;
+                const inputData = e.inputBuffer.getChannelData(0);
+                chunks.push(new Float32Array(inputData));
+
+                // Every ~3.5 seconds (14 chunks of 4096 samples = 57,344 samples at 16kHz)
+                if (chunks.length >= 14) {
+                    const totalLen = chunks.reduce((acc, c) => acc + c.length, 0);
+                    const merged = new Float32Array(totalLen);
+                    let offset = 0;
+                    for (const c of chunks) {
+                        merged.set(c, offset);
+                        offset += c.length;
+                    }
+                    chunks = [];
+                    sendPcmAudio(merged);
+                }
+            };
+            source.connect(processor);
+            processor.connect(audioCtx.destination);
+        } catch (err) {
+            console.warn('Microphone not accessible for live talk, using preset buttons', err);
+        }
+    }
+
+    function endCall() {
+        inCall = false;
+        clearInterval(callTimer);
+        document.getElementById('main-call-btn').classList.remove('incall');
+        document.getElementById('main-call-btn').innerText = '📞';
+        document.getElementById('dot').className = 'status-dot active';
+        document.getElementById('call-status').innerText = 'Call Ended';
+        document.getElementById('live-mic-indicator').style.display = 'none';
+
+        if (audioStream) {
+            audioStream.getTracks().forEach(t => t.stop());
+            audioStream = null;
+        }
+        if (audioCtx) {
+            audioCtx.close();
+            audioCtx = null;
+        }
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'end_call' }));
+        }
+    }
+
+    function sendPcmAudio(float32Array) {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        // Convert to 16-bit PCM
+        const int16 = new Int16Array(float32Array.length);
+        for (let i = 0; i < float32Array.length; i++) {
+            const s = Math.max(-1, Math.min(1, float32Array[i]));
+            int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        // Base64 encode
+        let binary = '';
+        const bytes = new Uint8Array(int16.buffer);
+        const len = bytes.byteLength;
+        for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
+        const b64 = btoa(binary);
+
+        ws.send(JSON.stringify({ type: 'audio_chunk', pcm16_b64: b64 }));
+    }
+
+    async function transmitScenario(scenarioKey) {
+        if (!inCall) {
+            await startCall();
+        }
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'trigger_scenario', scenario: scenarioKey }));
+        }
+    }
+    </script>
+</body>
+</html>

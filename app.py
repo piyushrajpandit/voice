@@ -580,6 +580,195 @@ async def get_sample(sample_name: str):
 os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+
+# ── In-Browser Scammer Calling Terminal (Zero Credit Card Demo) ──
+@app.get("/dialer", response_class=HTMLResponse)
+@app.get("/scammer-dialer", response_class=HTMLResponse)
+async def serve_scammer_dialer():
+    with open("static/dialer.html", "r") as f:
+        return f.read()
+
+@app.websocket("/ws/scammer-call")
+async def handle_scammer_call_ws(websocket: WebSocket):
+    await websocket.accept()
+    caller_id = "+1 (555) 392-8192"
+    try:
+        while True:
+            raw = await websocket.receive_text()
+            msg = json.loads(raw)
+            mtype = msg.get("type")
+
+            if mtype == "start_call":
+                caller_id = msg.get("caller", "+1 (555) 392-8192")
+                print(f"[Scammer Terminal] Incoming demo call from {caller_id}")
+                await broadcast_live_event({
+                    "type": "telecom_call_started",
+                    "caller": caller_id,
+                    "call_sid": "demo-softphone"
+                })
+
+            elif mtype == "audio_chunk":
+                b64 = msg.get("pcm16_b64")
+                if b64:
+                    raw_bytes = base64.b64decode(b64)
+                    arr16 = np.frombuffer(raw_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+                    if len(arr16) > 8000:
+                        # Neural analysis
+                        preds = classifier({"raw": arr16, "sampling_rate": 16000})
+                        scores = {p["label"].lower(): p["score"] for p in preds}
+                        fake_score = scores.get("fake", 0.0)
+                        is_fake = fake_score > 0.5
+
+                        forensics = extract_librosa_forensics(arr16, 16000)
+                        speech = transcribe_audio_snippet(arr16, 16000)
+                        scam_analysis = analyze_transcript(speech["transcript"], language=speech.get("language", "en"))
+
+                        if is_fake and scam_analysis["is_scam"]:
+                            composite_verdict = "CRITICAL_AI_SCAM"
+                        elif is_fake:
+                            composite_verdict = "DEEPFAKE_VOICE"
+                        elif scam_analysis["is_scam"]:
+                            composite_verdict = "HUMAN_FRAUD_CALL"
+                        else:
+                            composite_verdict = "AUTHENTIC_SAFE"
+
+                        call_id = db.log_call(
+                            verdict="DEEPFAKE_CLONE" if is_fake else "AUTHENTIC_HUMAN",
+                            composite_verdict=composite_verdict,
+                            threat_score=round(fake_score * 100, 1),
+                            scam_score=float(scam_analysis.get("scam_score", 0.0)),
+                            risk_level=str(scam_analysis.get("risk_level", "SAFE")),
+                            primary_category=scam_analysis.get("primary_category") or "Demo Scammer Call",
+                            detected_language=speech.get("language", "en"),
+                            transcript=speech.get("transcript", ""),
+                            matched_keywords=scam_analysis.get("matched_keywords", []),
+                            urgency_markers=scam_analysis.get("urgency_markers", []),
+                            duration=round(len(arr16)/16000, 1),
+                            acoustic_data={
+                                "pitch_f0_hz": forensics["pitch_f0_hz"],
+                                "spectral_centroid_hz": forensics["spectral_centroid_hz"],
+                                "spectral_flatness": forensics["spectral_flatness"]
+                            },
+                            caller_label=f"Demo Scammer Call ({caller_id})"
+                        )
+
+                        if scam_analysis.get("is_scam") or is_fake:
+                            try:
+                                sms_service.send_scam_alert_sms(
+                                    call_id=str(call_id or "demo-scam"),
+                                    scam_analysis=scam_analysis,
+                                    is_fake_voice=is_fake
+                                )
+                            except Exception as smse:
+                                print(f"Demo SMS warning: {smse}")
+
+                        await broadcast_live_event({
+                            "type": "telecom_chunk_analyzed",
+                            "caller": caller_id,
+                            "is_fake": is_fake,
+                            "threat_score": round(fake_score * 100, 1),
+                            "transcript": speech.get("transcript", ""),
+                            "composite_verdict": composite_verdict,
+                            "risk_level": scam_analysis.get("risk_level", "SAFE"),
+                            "call_id": call_id
+                        })
+
+            elif mtype == "trigger_scenario":
+                skey = msg.get("scenario")
+                sample_file = "samples/sample_ai_clone.wav"
+                if skey == "benign":
+                    sample_file = "samples/sample_real_human.wav"
+                elif skey == "bank_otp" or skey == "police_arrest":
+                    sample_file = "samples/sample_ai_clone.wav"
+
+                if os.path.exists(sample_file):
+                    data, sr = sf.read(sample_file)
+                    if len(data.shape) > 1: data = data[:, 0]
+                    slice_data = data[:16000 * 5].astype(np.float32)
+
+                    preds = classifier({"raw": slice_data, "sampling_rate": 16000})
+                    scores = {p["label"].lower(): p["score"] for p in preds}
+                    fake_score = scores.get("fake", 0.0)
+                    is_fake = fake_score > 0.5
+                    forensics = extract_librosa_forensics(slice_data, 16000)
+
+                    # Scenario-tailored transcript simulation for instant demo impact
+                    if skey == "bail_scam":
+                        demo_transcript = "Mom, please listen to me. I was arrested after a car accident and my battery is dying. You must wire $3000 to this bail bondsman immediately."
+                        scam_analysis = analyze_transcript(demo_transcript, language="en")
+                    elif skey == "police_arrest":
+                        demo_transcript = "आपका बेटा पुलिस स्टेशन में गिरफ्तार है, तुरंत पैसे ट्रांसफर करो वरना जेल भेज देंगे। किसी को मत बताना।"
+                        scam_analysis = analyze_transcript(demo_transcript, language="hi")
+                    elif skey == "bank_otp":
+                        demo_transcript = "नमस्ते सर, मैं स्टेट बैंक से मैनेजर बोल रहा हूँ। आपका खाता सस्पेंड हो जाएगा, तुरंत ओटीपी बताओ।"
+                        scam_analysis = analyze_transcript(demo_transcript, language="hi")
+                    else:
+                        demo_transcript = "Hey Dad, just calling to see if you are free for dinner tonight around 7."
+                        scam_analysis = analyze_transcript(demo_transcript, language="en")
+
+                    if is_fake and scam_analysis["is_scam"]:
+                        composite_verdict = "CRITICAL_AI_SCAM"
+                    elif is_fake:
+                        composite_verdict = "DEEPFAKE_VOICE"
+                    elif scam_analysis["is_scam"]:
+                        composite_verdict = "HUMAN_FRAUD_CALL"
+                    else:
+                        composite_verdict = "AUTHENTIC_SAFE"
+
+                    call_id = db.log_call(
+                        verdict="DEEPFAKE_CLONE" if is_fake else "AUTHENTIC_HUMAN",
+                        composite_verdict=composite_verdict,
+                        threat_score=round(fake_score * 100, 1),
+                        scam_score=float(scam_analysis.get("scam_score", 0.0)),
+                        risk_level=str(scam_analysis.get("risk_level", "SAFE")),
+                        primary_category=scam_analysis.get("primary_category") or "AI Scammer Attack",
+                        detected_language=scam_analysis.get("language", "en"),
+                        transcript=demo_transcript,
+                        matched_keywords=scam_analysis.get("matched_keywords", []),
+                        urgency_markers=scam_analysis.get("urgency_markers", []),
+                        duration=5.0,
+                        acoustic_data={
+                            "pitch_f0_hz": forensics["pitch_f0_hz"],
+                            "spectral_centroid_hz": forensics["spectral_centroid_hz"],
+                            "spectral_flatness": forensics["spectral_flatness"]
+                        },
+                        caller_label=f"Scenario Attack ({caller_id})"
+                    )
+
+                    if scam_analysis.get("is_scam") or is_fake:
+                        try:
+                            sms_service.send_scam_alert_sms(
+                                call_id=str(call_id or "demo-scam"),
+                                scam_analysis=scam_analysis,
+                                is_fake_voice=is_fake
+                            )
+                        except Exception as smse:
+                            print(f"Scenario SMS error: {smse}")
+
+                    await broadcast_live_event({
+                        "type": "telecom_chunk_analyzed",
+                        "caller": caller_id,
+                        "is_fake": is_fake,
+                        "threat_score": round(fake_score * 100, 1),
+                        "transcript": demo_transcript,
+                        "composite_verdict": composite_verdict,
+                        "risk_level": scam_analysis.get("risk_level", "SAFE"),
+                        "call_id": call_id
+                    })
+
+            elif mtype == "end_call":
+                print(f"[Scammer Terminal] Demo call ended by {caller_id}")
+                await broadcast_live_event({
+                    "type": "telecom_call_ended",
+                    "caller": caller_id
+                })
+
+    except WebSocketDisconnect:
+        print("[Scammer Terminal] Client disconnected")
+    except Exception as e:
+        print(f"[Scammer Terminal] Error: {e}")
+
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
     with open("static/index.html", "r") as f:
