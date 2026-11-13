@@ -1718,6 +1718,53 @@
 
     btnRecord.addEventListener('click', toggleRecord);
 
+    function audioBufferToWav(buffer) {
+        const sampleRate = 16000;
+        const srcData = buffer.getChannelData(0);
+        const srcRate = buffer.sampleRate;
+        const targetLength = Math.max(1, Math.round(srcData.length * sampleRate / srcRate));
+        const result = new Float32Array(targetLength);
+        for (let i = 0; i < targetLength; i++) {
+            const srcIdx = (i * srcRate / sampleRate);
+            const idxFloor = Math.floor(srcIdx);
+            const idxCeil = Math.min(srcData.length - 1, idxFloor + 1);
+            const frac = srcIdx - idxFloor;
+            result[i] = srcData[idxFloor] * (1 - frac) + srcData[idxCeil] * frac;
+        }
+
+        const bufferLen = 44 + result.length * 2;
+        const outBuffer = new ArrayBuffer(bufferLen);
+        const view = new DataView(outBuffer);
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        writeString(view, 0, 'RIFF');
+        view.setUint32(4, 36 + result.length * 2, true);
+        writeString(view, 8, 'WAVE');
+        writeString(view, 12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true); // PCM
+        view.setUint16(22, 1, true); // Mono
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * 2, true); // byte rate
+        view.setUint16(32, 2, true); // block align
+        view.setUint16(34, 16, true); // bits per sample
+        writeString(view, 36, 'data');
+        view.setUint32(40, result.length * 2, true);
+
+        let offset = 44;
+        for (let i = 0; i < result.length; i++, offset += 2) {
+            const s = Math.max(-1, Math.min(1, result[i]));
+            view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        }
+
+        return new Blob([outBuffer], { type: 'audio/wav' });
+    }
+
     async function startRecord() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1726,10 +1773,20 @@
             mediaRecorder.ondataavailable = (e) => {
                 if (e.data.size > 0) recordedChunks.push(e.data);
             };
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(recordedChunks, { type: 'audio/wav' });
-                const file = new File([blob], 'live_mic_recording.wav', { type: 'audio/wav' });
-                handleFileSelect(file);
+            mediaRecorder.onstop = async () => {
+                const rawBlob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+                try {
+                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    const arrayBuf = await rawBlob.arrayBuffer();
+                    const audioBuf = await audioCtx.decodeAudioData(arrayBuf);
+                    const wavBlob = audioBufferToWav(audioBuf);
+                    const file = new File([wavBlob], 'live_mic_recording.wav', { type: 'audio/wav' });
+                    handleFileSelect(file);
+                } catch (convErr) {
+                    console.warn('[Recorder] In-browser WAV conversion fallback:', convErr);
+                    const file = new File([rawBlob], 'live_mic_recording.wav', { type: rawBlob.type || 'audio/wav' });
+                    handleFileSelect(file);
+                }
             };
             mediaRecorder.start();
 
@@ -1801,9 +1858,15 @@
         isAnalyzing = true;
         drawWaveform();
 
-        // Extract client-side waveform peaks
-        const arrayBuffer = await file.arrayBuffer();
-        await extractBarHeightsFromAudioBuffer(arrayBuffer.slice(0));
+        // Extract client-side waveform peaks safely in background
+        (async () => {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                await extractBarHeightsFromAudioBuffer(arrayBuffer.slice(0));
+            } catch (e) {
+                console.warn('[WebAudio] Client waveform extract fallback:', e);
+            }
+        })();
 
         const formData = new FormData();
         formData.append('file', file);
@@ -1815,15 +1878,17 @@
             });
 
             if (!res.ok) {
-                throw new Error('Analysis server returned status ' + res.status);
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || ('Analysis server returned status ' + res.status));
             }
 
             const data = await res.json();
             renderResultData(data, file.name);
         } catch (e) {
+            console.error('[Analyze Error]', e);
             isAnalyzing = false;
             document.getElementById('result-panel-title').innerText = 'Result';
-            showError('Unable to analyze audio clip. Please try another file.');
+            showError(e.message || 'Unable to analyze audio clip. Please try another file.');
         }
     }
 
@@ -1938,10 +2003,16 @@
         const transcriptElem = document.getElementById('transcript-body');
         let text = data.transcript || "No spoken words transcribed in sample.";
         const phrases = data.flaggedPhrases || [];
-        if (phrases.length > 0 && text) {
+        function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+        if (phrases.length > 0 && text && text !== "(No spoken words detected)" && text !== "(Transcription unavailable)") {
             phrases.forEach(phrase => {
-                const regex = new RegExp(`(${phrase})`, 'gi');
-                text = text.replace(regex, '<mark>$1</mark>');
+                if (phrase && typeof phrase === 'string' && phrase.trim()) {
+                    const safe = escapeRegExp(phrase.trim());
+                    const regex = new RegExp(`(${safe})`, 'gi');
+                    text = text.replace(regex, '<mark>$1</mark>');
+                }
             });
         }
         transcriptElem.innerHTML = `"${text}"`;

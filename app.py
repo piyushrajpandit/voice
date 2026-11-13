@@ -75,7 +75,8 @@ warmup_models()
 def classify_audio_slice(audio_slice, sr=16000):
     if classifier is not None:
         try:
-            return classifier({"raw": audio_slice, "sampling_rate": sr})
+            slice_f32 = np.asarray(audio_slice, dtype=np.float32)
+            return classifier({"raw": slice_f32, "sampling_rate": sr})
         except Exception as e:
             print(f"Classifier inference error: {e}")
     # Lightweight deterministic score
@@ -105,7 +106,23 @@ def process_audio_buffer(file_bytes):
     sr = 16000
     if sf is not None:
         try:
-            data, sr = sf.read(io.BytesIO(file_bytes))
+            data, sr = sf.read(io.BytesIO(file_bytes), dtype='float32')
+        except Exception:
+            pass
+    # Try PyAV for WebM, Opus, MP4, AAC, MP3 containers
+    if data is None:
+        try:
+            import av
+            container = av.open(io.BytesIO(file_bytes))
+            resampler = av.AudioResampler(format="fltp", layout="mono", rate=16000)
+            audio_frames = []
+            for frame in container.decode(audio=0):
+                resampled_frames = resampler.resample(frame)
+                for r_frame in resampled_frames:
+                    audio_frames.append(r_frame.to_ndarray()[0])
+            if audio_frames:
+                data = np.concatenate(audio_frames).astype(np.float32)
+                sr = 16000
         except Exception:
             pass
     if data is None:
@@ -121,6 +138,7 @@ def process_audio_buffer(file_bytes):
             else:
                 data = np.zeros(16000, dtype=np.float32)
 
+    data = np.asarray(data, dtype=np.float32)
     if len(data.shape) > 1:
         data = np.mean(data, axis=1) # Mono
     
@@ -226,8 +244,16 @@ def extract_librosa_forensics(audio_data, sr=16000):
 def transcribe_audio_snippet(audio_data, sr=16000):
     """Transcribe audio with multilingual auto-detection and check for spoken emergency safewords."""
     try:
+        audio_f32 = np.asarray(audio_data, dtype=np.float32)
+        if len(audio_f32) == 0:
+            return {
+                "transcript": "(No spoken words detected)",
+                "language": "en",
+                "language_confidence": 0.0,
+                "safeword_spoken": False
+            }
         # Multilingual auto-detection (detects en, hi, bn, ta, te, es, fr, etc.)
-        segments, info = whisper_model.transcribe(audio_data, beam_size=1, vad_filter=True)
+        segments, info = whisper_model.transcribe(audio_f32, beam_size=1, vad_filter=True)
         text = " ".join([seg.text.strip() for seg in segments]).strip()
         
         # Check if the designated safe-word or keyword was spoken
@@ -292,7 +318,8 @@ async def analyze_audio(file: Optional[UploadFile] = File(None), audio: Optional
     forensics = extract_librosa_forensics(sample_slice, sr)
     
     # 3. Multilingual faster-whisper Speech-to-Text & Spoken Safeword Intercept
-    speech = transcribe_audio_snippet(sample_slice, sr)
+    whisper_audio = audio_data[:16000 * 30]  # Transcribe up to 30s
+    speech = transcribe_audio_snippet(whisper_audio, sr)
     
     # 4. NLP Multilingual Scam & Extortion Intent Analysis
     scam_analysis = analyze_transcript(speech["transcript"], language=speech.get("language", "en"))
