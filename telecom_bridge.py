@@ -20,7 +20,7 @@ from fastapi.responses import Response
 
 # Cache forwarding phone number
 _TELECOM_CONFIG = {
-    "forwarding_phone": os.getenv("EMERGENCY_CONTACT_PHONE", os.getenv("FORWARDING_PHONE", "")),
+    "forwarding_phone": os.getenv("FORWARDING_PHONE", "DEMO"),
     "twilio_phone": os.getenv("TWILIO_PHONE_NUMBER", ""),
     "whisper_alert_enabled": os.getenv("WHISPER_ALERT_ENABLED", "true").lower() in ["1", "true", "yes"]
 }
@@ -60,16 +60,24 @@ def generate_twiml_bridge_response(base_url: str, caller_number: str = "Unknown"
 
     stream_endpoint = f"{wss_url}/api/voice/stream"
 
-    if not forwarding_num:
-        # If no forwarding phone is set, give a voice prompt explaining setup
+    # If forwarding_num is DEMO, DIRECT, or empty, run in Direct Scammer Intercept Demo Mode (100% Free, Zero Balance Needed)
+    if not forwarding_num or forwarding_num.upper() in ["DEMO", "DIRECT", "NONE", "FREE"]:
         twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="alice">Voice Clone Shield is active, but no forwarding phone number has been configured. Please configure your destination number in the dashboard.</Say>
-    <Hangup/>
+    <!-- 1. Silently fork caller audio to AI stream -->
+    <Start>
+        <Stream url="{stream_endpoint}" track="inbound_track">
+            <Parameter name="caller" value="{caller_number}" />
+        </Stream>
+    </Start>
+    <!-- 2. Directly answer call and hold line for scammer speech -->
+    <Say voice="alice">Voice Clone Shield active. Security protocol enabled. Please speak now.</Say>
+    <Pause length="120"/>
 </Response>
 """
         return Response(content=twiml, media_type="application/xml")
 
+    # Regular 3-Way Forwarding Mode
     twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <!-- 1. Silently fork caller audio to AI stream -->
