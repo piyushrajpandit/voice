@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Clone Shield - Reference Design</title>
+    <!-- Google Fonts: Geist & Geist Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050505;
+            --panel: #0a0808;
+            --line: #221214;
+            --line2: #3a1b1f;
+            --text: #f2eeee;
+            --sub: #9a8f90;
+            --dim: #5e5456;
+            --risk: #ff2d3d;
+            --ok: #46c28a;
+            --warning: #f5b82e;
+            --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        ::selection {
+            background: var(--risk);
+            color: #ffffff;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font-sans);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Top 2px solid risk line */
+        .top-risk-line {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--risk);
+            z-index: 9999;
+        }
+
+        /* Fixed full-screen dot field canvas */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Radial vignette overlay */
+        .vignette-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 1;
+            background: radial-gradient(circle at center, transparent 30%, var(--bg) 100%);
+        }
+
+        /* App Container */
+        .app-layout {
+            position: relative;
+            z-index: 2;
+            max-width: 880px;
+            margin: 0 auto;
+            padding: 0 20px 80px;
+        }
+
+        /* Header (56px tall, 1px bottom border, max-width 880px, centered) */
+        header.site-header {
+            height: 56px;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .header-brand svg {
+            color: var(--risk);
+            flex-shrink: 0;
+        }
+
+        nav.header-nav {
+            display: flex;
+            align-items: center;
+            gap: 28px;
+        }
+
+        .nav-link {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--sub);
+            text-decoration: none;
+            position: relative;
+            padding: 16px 0;
+            transition: color 150ms ease;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .nav-link:hover {
+            color: var(--text);
+        }
+
+        .nav-link.active {
+            color: var(--text);
+        }
+
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--risk);
+        }
+
+        /* Status Dot (Right: ONE status dot only, 10px circle, no text) */
+        .status-dot-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            width: 24px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--risk);
+            animation: dotBlink 1.2s ease-in-out infinite;
+        }
+
+        .status-dot.offline {
+            background: var(--warning);
+            animation: none;
+        }
+
+        @keyframes dotBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
+        }
+
+        /* Hero */
+        .hero {
+            margin-top: 56px;
+            margin-bottom: 32px;
+        }
+
+        .hero h1 {
+            font-size: 30px;
+            font-weight: 500;
+            letter-spacing: -0.025em;
+            color: var(--text);
+            line-height: 1.2;
+            margin-bottom: 12px;
+        }
+
+        .hero p.lead {
+            font-size: 15px;
+            color: var(--sub);
+            max-width: 52ch;
+            line-height: 1.5;
+        }
+
+        /* Reusable Panel */
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            margin-bottom: 12px;
+            transition: border-color 200ms ease;
+        }
+
+        .panel:hover {
+            border-color: rgba(255, 45, 61, 0.45);
+        }
+
+        .panel-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .panel-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .panel-title-square {
+            width: 6px;
+            height: 6px;
+            border-radius: 1px;
+            background: var(--risk);
+            flex-shrink: 0;
+        }
+
+        .panel-secondary {
+            font-size: 12px;
+            color: var(--dim);
+            font-family: var(--font-mono);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .panel-body {
+            padding: 16px;
+        }
+
+        /* Panel 1: Input */
+        .input-row {
+            display: flex;
+            gap: 12px;
+            align-items: stretch;
+        }
+
+        .drop-zone {
+            flex: 1;
+            border: 1px dashed var(--line2);
+            border-radius: 4px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 150ms ease, background-color 150ms ease;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--risk);
+            background: rgba(255, 45, 61, 0.05);
+        }
+
+        .drop-zone-main {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .drop-zone-sub {
+            font-size: 12px;
+            color: var(--sub);
+        }
+
+        .btn-record {
+            background: var(--risk);
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            padding: 0 24px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            min-width: 140px;
+            transition: opacity 150ms ease;
+            font-family: inherit;
+        }
+
+        .btn-record:hover {
+            opacity: 0.92;
+        }
+
+        .btn-record.recording {
+            background: #b91c1c;
+        }
+
+        .kbd-chip {
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+
+        .shortcuts-hint {
+            font-size: 12px;
+            color: var(--dim);
+            font-family: var(--font-mono);
+            margin-top: 10px;
+        }
+
+        .error-line {
+            font-size: 13px;
+            color: var(--risk);
+            font-family: var(--font-sans);
+            margin-top: 10px;
+            display: none;
+        }
+
+        .error-line button {
+            background: none;
+            border: none;
+            color: var(--risk);
+            text-decoration: underline;
+            cursor: pointer;
+            font-family: inherit;
+            margin-left: 6px;
+        }
+
+        /* Panel 2: Result */
+        .result-top-grid {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 24px;
+            align-items: center;
+            padding-bottom: 20px;
+        }
+
+        .score-display {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .score-number {
+            font-family: var(--font-mono);
+            font-size: 56px;
+            font-weight: 500;
+            letter-spacing: -0.05em;
+            color: var(--text);
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .score-denom {
+            font-size: 20px;
+            color: var(--sub);
+            letter-spacing: normal;
+        }
+
+        .verdict-label {
+            margin-top: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .verdict-synthetic { color: var(--risk); }
+        .verdict-uncertain { color: var(--warning); }
+        .verdict-genuine { color: var(--ok); }
+
+        /* Risk Track Scale */
+        .scale-container {
+            width: 100%;
+        }
+
+        .track-wrap {
+            position: relative;
+            width: 100%;
+            height: 24px;
+            display: flex;
+            align-items: center;
+        }
+
+        .risk-track-bg {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: var(--line2);
+            top: 11px;
+        }
+
+        .risk-track-shaded {
+            position: absolute;
+            right: 0;
+            width: 30%;
+            height: 4px;
+            top: 10px;
+            background: rgba(255, 45, 61, 0.28);
+        }
+
+        .risk-track-fill {
+            position: absolute;
+            left: 0;
+            height: 2px;
+            top: 11px;
+            background: var(--risk);
+            width: 0%;
+            transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .tick-35 {
+            position: absolute;
+            left: 35%;
+            top: 5px;
+            width: 1px;
+            height: 14px;
+            background: var(--line2);
+        }
+
+        .tick-70 {
+            position: absolute;
+            left: 70%;
+            top: 5px;
+            width: 1px;
+            height: 14px;
+            background: var(--line2);
+        }
+
+        .score-pin {
+            position: absolute;
+            left: 0%;
+            top: 3px;
+            width: 2px;
+            height: 18px;
+            background: #ffffff;
+            transition: left 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateX(-50%);
+        }
+
+        .scale-labels {
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--dim);
+            font-variant-numeric: tabular-nums;
+            margin-top: 4px;
+        }
+
+        /* 4-Cell Meta Row */
+        .meta-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            border-top: 1px solid var(--line);
+            margin: 0 -16px -16px;
+        }
+
+        .meta-cell {
+            padding: 12px 16px;
+            border-right: 1px solid var(--line);
+        }
+
+        .meta-cell:last-child {
+            border-right: none;
+        }
+
+        .meta-label {
+            font-size: 11px;
+            color: var(--dim);
+            margin-bottom: 4px;
+            font-family: var(--font-sans);
+        }
+
+        .meta-value {
+            font-family: var(--font-mono);
+            font-size: 14px;
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Panel 3: Waveform */
+        .waveform-area {
+            height: 170px;
+            background: #060404;
+            border: 1px solid var(--line);
+            position: relative;
+            cursor: crosshair;
+            overflow: hidden;
+        }
+
+        #waveform-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .wave-hairline {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: rgba(255, 255, 255, 0.6);
+            pointer-events: none;
+            display: none;
+        }
+
+        .wave-tooltip {
+            position: absolute;
+            top: 10px;
+            background: #110d0d;
+            border: 1px solid var(--line2);
+            color: var(--text);
+            font-family: var(--font-mono);
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 3px;
+            pointer-events: none;
+            display: none;
+            white-space: nowrap;
+            z-index: 10;
+        }
+
+        .time-axis {
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--dim);
+            margin-top: 8px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .wave-legend {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-top: 12px;
+            font-size: 12px;
+            color: var(--sub);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-sq {
+            width: 8px;
+            height: 8px;
+            border-radius: 1px;
+        }
+
+        .legend-sq.flagged { background: var(--risk); }
+        .legend-sq.genuine { background: #7d7174; }
+
+        .segment-strip-caption {
+            font-size: 11px;
+            color: var(--dim);
+            font-family: var(--font-mono);
+            margin-top: 12px;
+            margin-bottom: 6px;
+        }
+
+        .segment-strip {
+            display: grid;
+            grid-template-columns: repeat(16, 1fr);
+            gap: 2px;
+            height: 14px;
+        }
+
+        .seg-block {
+            background: #1e1315;
+            border-radius: 1px;
+            transition: transform 150ms ease, background-color 150ms ease;
+            transform-origin: center;
+        }
+
+        .seg-block.flagged {
+            background: var(--risk);
+        }
+
+        .seg-block.hovered {
+            transform: scaleY(1.35);
+        }
+
+        /* Panel 4: Signals */
+        .signal-row {
+            display: grid;
+            grid-template-columns: 200px 1fr 60px;
+            gap: 16px;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(34, 18, 20, 0.6);
+        }
+
+        .signal-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .signal-row:first-child {
+            padding-top: 0;
+        }
+
+        .signal-name {
+            font-size: 13px;
+            color: var(--text);
+        }
+
+        .signal-track {
+            height: 3px;
+            background: var(--line2);
+            position: relative;
+            border-radius: 1px;
+            overflow: hidden;
+        }
+
+        .signal-fill {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 0%;
+            background: #6b5b5d;
+            transition: width 1.1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .signal-fill.risk {
+            background: var(--risk);
+        }
+
+        .signal-val {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            color: var(--text);
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Panel 5: Transcript */
+        .transcript-text {
+            font-size: 14px;
+            color: var(--sub);
+            line-height: 1.7;
+        }
+
+        .transcript-text mark {
+            background: rgba(255, 45, 61, 0.22);
+            color: var(--text);
+            border-radius: 2px;
+            padding: 1px 3px;
+        }
+
+        /* Footer */
+        footer.site-footer {
+            margin-top: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--dim);
+            padding-top: 16px;
+            border-top: 1px solid var(--line);
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            header.site-header nav.header-nav {
+                display: none;
+            }
+            .result-top-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            .input-row {
+                flex-direction: column;
+            }
+            .btn-record {
+                height: 44px;
+            }
+            .meta-row {
+                grid-template-columns: 1fr 1fr;
+            }
+            .meta-cell:nth-child(2) {
+                border-right: none;
+            }
+            .meta-cell:nth-child(3) {
+                border-top: 1px solid var(--line);
+            }
+            .meta-cell:nth-child(4) {
+                border-top: 1px solid var(--line);
+                border-right: none;
+            }
+            .signal-row {
+                grid-template-columns: 140px 1fr 45px;
+                gap: 10px;
+            }
+        }
+
+        /* Accessibility: keyboard focus */
+        a:focus-visible, button:focus-visible, div[tabindex]:focus-visible {
+            outline: 1px solid var(--risk);
+            outline-offset: 2px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation: none !important;
+                transition: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Top 2px solid risk line -->
+    <div class="top-risk-line"></div>
+
+    <!-- Fixed full-screen dot field canvas -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Radial vignette overlay -->
+    <div class="vignette-overlay"></div>
+
+    <div class="app-layout">
+        <!-- Header -->
+        <header class="site-header">
+            <a href="/" class="header-brand">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                <span>Voice Clone Shield</span>
+            </a>
+            <nav class="header-nav">
+                <button class="nav-link active" id="tab-analysis">Analysis</button>
+                <button class="nav-link" id="tab-monitor">Live monitor</button>
+                <button class="nav-link" id="tab-audit">Audit log</button>
+            </nav>
+            <div class="status-dot-wrap">
+                <div class="status-dot" id="header-status-dot" role="status" aria-label="Model working" title="Model working"></div>
+            </div>
+        </header>
+
+        <!-- Hero -->
+        <div class="hero">
+            <h1>Is this voice real?</h1>
+            <p class="lead">Upload a recording or speak into the mic. Each clip is scored for synthetic speech artifacts in under a second.</p>
+        </div>
+
+        <!-- Panel 1: Input -->
+        <section class="panel" id="panel-input">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span class="panel-title-square"></span>
+                    <span>Input</span>
+                </div>
+                <div class="panel-secondary">16 kHz mono PCM</div>
+            </div>
+            <div class="panel-body">
+                <div class="input-row">
+                    <div class="drop-zone" id="drop-zone">
+                        <div class="drop-zone-main">Drop an audio file</div>
+                        <div class="drop-zone-sub">WAV, MP3, M4A up to 25 MB</div>
+                        <input type="file" id="file-input" accept="audio/*,.wav,.mp3,.m4a" style="display: none;">
+                    </div>
+                    <button class="btn-record" id="btn-record">
+                        <span id="record-text">Record</span>
+                        <span class="kbd-chip">R</span>
+                    </button>
+                </div>
+                <div class="shortcuts-hint">Shortcuts: U upload, R record, Esc cancel</div>
+                <div class="error-line" id="input-error-line">Analysis error occurred.<button onclick="retryLastAction()">Retry</button></div>
+            </div>
+        </section>
+
+        <!-- Panel 2: Result -->
+        <section class="panel" id="panel-result">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span class="panel-title-square"></span>
+                    <span id="result-panel-title">Result</span>
+                </div>
+                <div class="panel-secondary" id="result-filename">sample_call_0231.wav</div>
+            </div>
+            <div class="panel-body">
+                <div class="result-top-grid">
+                    <div class="score-display">
+                        <div class="score-number"><span id="score-val">87</span><span class="score-denom">/100</span></div>
+                        <div class="verdict-label verdict-synthetic" id="verdict-text">Likely synthetic</div>
+                    </div>
+                    <div class="scale-container">
+                        <div class="track-wrap">
+                            <div class="risk-track-bg"></div>
+                            <div class="risk-track-shaded"></div>
+                            <div class="risk-track-fill" id="risk-track-fill" style="width: 87%;"></div>
+                            <div class="tick-35"></div>
+                            <div class="tick-70"></div>
+                            <div class="score-pin" id="score-pin" style="left: 87%;"></div>
+                        </div>
+                        <div class="scale-labels">
+                            <span>0</span>
+                            <span>Genuine</span>
+                            <span>Uncertain</span>
+                            <span>Synthetic</span>
+                            <span>100</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="meta-row">
+                    <div class="meta-cell">
+                        <div class="meta-label">Latency</div>
+                        <div class="meta-value" id="meta-latency">412 ms</div>
+                    </div>
+                    <div class="meta-cell">
+                        <div class="meta-label">Duration</div>
+                        <div class="meta-value" id="meta-duration">00:08.4</div>
+                    </div>
+                    <div class="meta-cell">
+                        <div class="meta-label">Segments flagged</div>
+                        <div class="meta-value" id="meta-segments">11 of 16</div>
+                    </div>
+                    <div class="meta-cell">
+                        <div class="meta-label">Confidence</div>
+                        <div class="meta-value" id="meta-confidence">0.94</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Panel 3: Waveform -->
+        <section class="panel" id="panel-waveform">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span class="panel-title-square"></span>
+                    <span>Waveform</span>
+                </div>
+                <div class="panel-secondary">Hover to inspect</div>
+            </div>
+            <div class="panel-body">
+                <div class="waveform-area" id="waveform-area">
+                    <canvas id="waveform-canvas" role="img" aria-label="Waveform display showing 11 flagged segments of 16"></canvas>
+                    <div class="wave-hairline" id="wave-hairline"></div>
+                    <div class="wave-tooltip" id="wave-tooltip">3.40 s &nbsp; Segment 7 &nbsp; Flagged &nbsp; 0.91</div>
+                </div>
+                <div class="time-axis">
+                    <span>0.0 s</span>
+                    <span id="time-mid">4.2 s</span>
+                    <span id="time-end">8.4 s</span>
+                </div>
+                <div class="wave-legend">
+                    <div class="legend-item">
+                        <span class="legend-sq flagged"></span>
+                        <span>Flagged as synthetic</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-sq genuine"></span>
+                        <span>Genuine</span>
+                    </div>
+                </div>
+                <div class="segment-strip-caption">Flagged segments / 0.5 s each</div>
+                <div class="segment-strip" id="segment-strip">
+                    <!-- 16 segment blocks rendered by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Panel 4: Signals -->
+        <section class="panel" id="panel-signals">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span class="panel-title-square"></span>
+                    <span>Signals</span>
+                </div>
+                <div class="panel-secondary">Contribution to score</div>
+            </div>
+            <div class="panel-body" id="signals-list">
+                <div class="signal-row">
+                    <div class="signal-name">Spectral artifacts</div>
+                    <div class="signal-track"><div class="signal-fill risk" style="width: 91%;"></div></div>
+                    <div class="signal-val">0.91</div>
+                </div>
+                <div class="signal-row">
+                    <div class="signal-name">Phase coherence</div>
+                    <div class="signal-track"><div class="signal-fill risk" style="width: 84%;"></div></div>
+                    <div class="signal-val">0.84</div>
+                </div>
+                <div class="signal-row">
+                    <div class="signal-name">Prosody variation</div>
+                    <div class="signal-track"><div class="signal-fill risk" style="width: 72%;"></div></div>
+                    <div class="signal-val">0.72</div>
+                </div>
+                <div class="signal-row">
+                    <div class="signal-name">Breath and noise floor</div>
+                    <div class="signal-track"><div class="signal-fill" style="width: 58%;"></div></div>
+                    <div class="signal-val">0.58</div>
+                </div>
+                <div class="signal-row">
+                    <div class="signal-name">Formant stability</div>
+                    <div class="signal-track"><div class="signal-fill" style="width: 33%;"></div></div>
+                    <div class="signal-val">0.33</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Panel 5: Transcript -->
+        <section class="panel" id="panel-transcript">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span class="panel-title-square"></span>
+                    <span>Transcript</span>
+                </div>
+                <div class="panel-secondary">faster-whisper</div>
+            </div>
+            <div class="panel-body">
+                <p class="transcript-text" id="transcript-body">
+                    "Mom, please listen to me, I was <mark>arrested after a car accident</mark> and my phone battery is dying. You must <mark>wire $3000 to this bail</mark> bondsman <mark>immediately</mark>."
+                </p>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="site-footer">
+            <span id="footer-version">Model v0.9.2</span>
+            <span>No audio is stored after analysis</span>
+        </footer>
+    </div>
+
+    <script>
+    /* ─────────────────────────────────────────────────────────────
+       1. GLOBAL BACKGROUND CANVAS: 34px Grid, 1.5px Dots, Mouse Easing
+       ───────────────────────────────────────────────────────────── */
+    const bgCanvas = document.getElementById('bg-canvas');
+    const bgCtx = bgCanvas.getContext('2d');
+    let width = 0, height = 0;
+    const GRID_STEP = 34;
+    const DOT_SIZE = 1.5;
+    const INFLUENCE_RADIUS = 150;
+    const MAX_OFFSET = 14;
+
+    const mouse = { x: -9999, y: -9999, targetX: -9999, targetY: -9999, active: false };
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const canHover = window.matchMedia('(hover: hover)').matches;
+
+    function resizeBgCanvas() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        width = window.innerWidth;
+        height = window.innerHeight;
+        bgCanvas.width = width * dpr;
+        bgCanvas.height = height * dpr;
+        bgCanvas.style.width = width + 'px';
+        bgCanvas.style.height = height + 'px';
+        bgCtx.scale(dpr, dpr);
+        if (prefersReducedMotion) {
+            renderStaticGrid();
+        }
+    }
+    window.addEventListener('resize', resizeBgCanvas);
+
+    if (canHover) {
+        window.addEventListener('mousemove', (e) => {
+            mouse.targetX = e.clientX;
+            mouse.targetY = e.clientY;
+            mouse.active = true;
+        });
+        window.addEventListener('mouseleave', () => {
+            mouse.active = false;
+        });
+    }
+
+    let animationFrameId = null;
+
+    function renderStaticGrid() {
+        bgCtx.clearRect(0, 0, width, height);
+        bgCtx.fillStyle = 'rgba(242, 238, 238, 0.08)';
+        for (let x = GRID_STEP / 2; x < width; x += GRID_STEP) {
+            for (let y = GRID_STEP / 2; y < height; y += GRID_STEP) {
+                bgCtx.fillRect(x - DOT_SIZE / 2, y - DOT_SIZE / 2, DOT_SIZE, DOT_SIZE);
+            }
+        }
+    }
+
+    function animateBg(timestamp) {
+        if (document.hidden) {
+            animationFrameId = requestAnimationFrame(animateBg);
+            return;
+        }
+
+        if (prefersReducedMotion) return;
+
+        // Smooth mouse position with 0.12 easing
+        mouse.x += (mouse.targetX - mouse.x) * 0.12;
+        mouse.y += (mouse.targetY - mouse.y) * 0.12;
+
+        bgCtx.clearRect(0, 0, width, height);
+
+        // Base opacity oscillating 0.03 to 0.17 slowly
+        const baseOpacity = 0.10 + 0.07 * Math.sin(timestamp * 0.001);
+
+        const rows = Math.ceil(height / GRID_STEP);
+        const cols = Math.ceil(width / GRID_STEP);
+
+        for (let c = 0; c < cols; c++) {
+            for (let r = 0; r < rows; r++) {
+                const ox = c * GRID_STEP + GRID_STEP / 2;
+                const oy = r * GRID_STEP + GRID_STEP / 2;
+
+                let px = ox;
+                let py = oy;
+                let dotOpacity = baseOpacity;
+                let isRed = false;
+
+                if (canHover && mouse.active) {
+                    const dx = ox - mouse.x;
+                    const dy = oy - mouse.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < INFLUENCE_RADIUS) {
+                        const factor = 1 - (dist / INFLUENCE_RADIUS);
+                        const push = factor * MAX_OFFSET;
+                        const angle = Math.atan2(dy, dx);
+                        px += Math.cos(angle) * push;
+                        py += Math.sin(angle) * push;
+
+                        dotOpacity = Math.min(0.85, baseOpacity + factor * 0.7);
+                        isRed = true;
+                    }
+                }
+
+                if (isRed) {
+                    bgCtx.fillStyle = `rgba(255, 45, 61, ${dotOpacity})`;
+                } else {
+                    bgCtx.fillStyle = `rgba(242, 238, 238, ${dotOpacity})`;
+                }
+
+                bgCtx.fillRect(px - DOT_SIZE / 2, py - DOT_SIZE / 2, DOT_SIZE, DOT_SIZE);
+            }
+        }
+
+        animationFrameId = requestAnimationFrame(animateBg);
+    }
+
+    resizeBgCanvas();
+    if (!prefersReducedMotion) {
+        animationFrameId = requestAnimationFrame(animateBg);
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       2. STATUS DOT HEALTH CHECK (POLL /api/health EVERY 10s)
+       ───────────────────────────────────────────────────────────── */
+    const statusDot = document.getElementById('header-status-dot');
+
+    async function checkHealth() {
+        if (!navigator.onLine) {
+            setOffline();
+            return;
+        }
+        try {
+            const res = await fetch('/api/health');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.status === 'healthy' || data.model_loaded) {
+                    setHealthy();
+                    return;
+                }
+            }
+            setOffline();
+        } catch (e) {
+            setOffline();
+        }
+    }
+
+    function setHealthy() {
+        if (statusDot) {
+            statusDot.classList.remove('offline');
+            statusDot.setAttribute('aria-label', 'Model working');
+            statusDot.setAttribute('title', 'Model working');
+        }
+    }
+
+    function setOffline() {
+        if (statusDot) {
+            statusDot.classList.add('offline');
+            statusDot.setAttribute('aria-label', 'Model unavailable');
+            statusDot.setAttribute('title', 'Model unavailable');
+        }
+    }
+
+    window.addEventListener('online', checkHealth);
+    window.addEventListener('offline', setOffline);
+    setInterval(checkHealth, 10000);
+    checkHealth();
+
+    /* ─────────────────────────────────────────────────────────────
+       3. 16-BLOCK SEGMENT STRIP INIT
+       ───────────────────────────────────────────────────────────── */
+    const segmentStrip = document.getElementById('segment-strip');
+    const SEGMENT_COUNT = 16;
+    // Default demo flags: 11 of 16 flagged
+    const demoFlags = [false, true, false, false, true, true, true, false, true, true, true, false, true, true, true, true];
+
+    function renderSegmentStrip(flaggedArray) {
+        segmentStrip.innerHTML = '';
+        for (let i = 0; i < SEGMENT_COUNT; i++) {
+            const block = document.createElement('div');
+            block.className = 'seg-block' + (flaggedArray[i] ? ' flagged' : '');
+            block.dataset.index = i;
+            segmentStrip.appendChild(block);
+        }
+    }
+    renderSegmentStrip(demoFlags);
+
+    /* ─────────────────────────────────────────────────────────────
+       4. WAVEFORM CANVAS: 96 Mirrored Vertical Bars Around Center Line
+       ───────────────────────────────────────────────────────────── */
+    const waveCanvas = document.getElementById('waveform-canvas');
+    const waveCtx = waveCanvas.getContext('2d');
+    const waveArea = document.getElementById('waveform-area');
+    const waveHairline = document.getElementById('wave-hairline');
+    const waveTooltip = document.getElementById('wave-tooltip');
+
+    let waveWidth = 0, waveHeight = 0;
+    const NUM_BARS = 96;
+    let barHeights = new Float32Array(NUM_BARS);
+    let barAnimProgress = new Float32Array(NUM_BARS);
+    let currentFlaggedSegments = demoFlags;
+    let hoveredSegmentIndex = -1;
+
+    // Generate demo bar heights (symmetric mirrored normalized peaks)
+    for (let i = 0; i < NUM_BARS; i++) {
+        const segIdx = Math.floor(i / (NUM_BARS / SEGMENT_COUNT));
+        const isFlagged = demoFlags[segIdx];
+        if (isFlagged) {
+            barHeights[i] = 0.35 + 0.6 * Math.abs(Math.sin(i * 0.28));
+        } else {
+            barHeights[i] = 0.08 + 0.35 * Math.abs(Math.sin(i * 0.18));
+        }
+    }
+
+    function resizeWaveform() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        waveWidth = waveArea.clientWidth;
+        waveHeight = waveArea.clientHeight;
+        waveCanvas.width = waveWidth * dpr;
+        waveCanvas.height = waveHeight * dpr;
+        waveCtx.scale(dpr, dpr);
+        drawWaveform();
+    }
+    window.addEventListener('resize', resizeWaveform);
+
+    let waveAnimStartTime = performance.now();
+
+    function animateWaveformBars(now) {
+        const elapsed = (now - waveAnimStartTime) / 1000;
+        let allDone = true;
+        for (let i = 0; i < NUM_BARS; i++) {
+            // 1.5s staggered ease-out
+            const delay = (i / NUM_BARS) * 0.6;
+            const t = Math.max(0, Math.min(1, (elapsed - delay) / 0.9));
+            // ease-out cubic
+            const ease = 1 - Math.pow(1 - t, 3);
+            barAnimProgress[i] = ease;
+            if (t < 1) allDone = false;
+        }
+        drawWaveform();
+        if (!allDone) {
+            requestAnimationFrame(animateWaveformBars);
+        }
+    }
+
+    function drawWaveform() {
+        waveCtx.clearRect(0, 0, waveWidth, waveHeight);
+        const centerY = waveHeight / 2;
+        const barWidth = 2.5;
+        const totalSpacing = waveWidth / NUM_BARS;
+        const segWidth = waveWidth / SEGMENT_COUNT;
+
+        // 1. Background tint and 2px top edge for flagged segments
+        for (let s = 0; s < SEGMENT_COUNT; s++) {
+            if (currentFlaggedSegments[s]) {
+                const sx = s * segWidth;
+                const isHovered = (hoveredSegmentIndex === s);
+                const alpha = hoveredSegmentIndex >= 0 ? (isHovered ? 0.12 : 0.04) : 0.08;
+                
+                // Red tint
+                waveCtx.fillStyle = `rgba(255, 45, 61, ${alpha})`;
+                waveCtx.fillRect(sx, 0, segWidth, waveHeight);
+
+                // 2px red top edge
+                waveCtx.fillStyle = 'var(--risk)';
+                waveCtx.fillRect(sx, 0, segWidth, 2);
+            }
+        }
+
+        // 2. Mirrored Bars around center line
+        for (let i = 0; i < NUM_BARS; i++) {
+            const segIdx = Math.floor(i / (NUM_BARS / SEGMENT_COUNT));
+            const isFlagged = currentFlaggedSegments[segIdx];
+            const isHoveredSeg = (hoveredSegmentIndex === segIdx);
+
+            let barAlpha = 1.0;
+            if (hoveredSegmentIndex >= 0) {
+                barAlpha = isHoveredSeg ? 1.0 : 0.3;
+            }
+
+            if (isFlagged) {
+                waveCtx.fillStyle = `rgba(255, 45, 61, ${barAlpha})`;
+            } else {
+                waveCtx.fillStyle = `rgba(125, 113, 116, ${barAlpha})`;
+            }
+
+            const bx = i * totalSpacing + (totalSpacing - barWidth) / 2;
+            const maxH = (waveHeight - 30) / 2;
+            const currentH = barHeights[i] * maxH * (barAnimProgress[i] || 1);
+
+            // Mirrored vertical bar around centerY
+            waveCtx.fillRect(bx, centerY - currentH, barWidth, currentH * 2);
+        }
+    }
+
+    // Waveform Hover Inspection
+    waveArea.addEventListener('mousemove', (e) => {
+        const rect = waveArea.getBoundingClientRect();
+        const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        waveHairline.style.display = 'block';
+        waveHairline.style.left = x + 'px';
+
+        const segIdx = Math.min(SEGMENT_COUNT - 1, Math.floor((x / rect.width) * SEGMENT_COUNT));
+        hoveredSegmentIndex = segIdx;
+
+        const isFlagged = currentFlaggedSegments[segIdx];
+        const segSec = (segIdx * 0.5 + 0.25).toFixed(2);
+        const scoreVal = isFlagged ? (0.85 + (segIdx % 5) * 0.03).toFixed(2) : (0.12 + (segIdx % 3) * 0.04).toFixed(2);
+
+        waveTooltip.style.display = 'block';
+        waveTooltip.innerHTML = `${segSec} s &nbsp; Segment ${segIdx + 1} &nbsp; ${isFlagged ? '<span style="color:var(--risk)">Flagged</span>' : '<span style="color:var(--ok)">Genuine</span>'} &nbsp; ${scoreVal}`;
+        
+        // Keep tooltip inside boundaries
+        const tipWidth = waveTooltip.offsetWidth || 180;
+        let tipX = x + 12;
+        if (tipX + tipWidth > rect.width) tipX = x - tipWidth - 12;
+        waveTooltip.style.left = Math.max(8, tipX) + 'px';
+
+        // Scale corresponding block in segment strip
+        const blocks = segmentStrip.querySelectorAll('.seg-block');
+        blocks.forEach((b, idx) => {
+            if (idx === segIdx) b.classList.add('hovered');
+            else b.classList.remove('hovered');
+        });
+
+        drawWaveform();
+    });
+
+    waveArea.addEventListener('mouseleave', () => {
+        waveHairline.style.display = 'none';
+        waveTooltip.style.display = 'none';
+        hoveredSegmentIndex = -1;
+        const blocks = segmentStrip.querySelectorAll('.seg-block');
+        blocks.forEach(b => b.classList.remove('hovered'));
+        drawWaveform();
+    });
+
+    resizeWaveform();
+    requestAnimationFrame(animateWaveformBars);
+
+    /* ─────────────────────────────────────────────────────────────
+       5. KEYBOARD SHORTCUTS: U (Upload), R (Record), Esc (Cancel)
+       ───────────────────────────────────────────────────────────── */
+    const fileInput = document.getElementById('file-input');
+    const dropZone = document.getElementById('drop-zone');
+    const btnRecord = document.getElementById('btn-record');
+    const recordText = document.getElementById('record-text');
+    let isRecording = false;
+    let recordInterval = null;
+    let recordSeconds = 0;
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            handleFileSelect(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files && fileInput.files[0]) {
+            handleFileSelect(fileInput.files[0]);
+        }
+    });
+
+    function toggleRecord() {
+        if (!isRecording) {
+            startRecord();
+        } else {
+            stopRecord();
+        }
+    }
+
+    btnRecord.addEventListener('click', toggleRecord);
+
+    function startRecord() {
+        isRecording = true;
+        recordSeconds = 0;
+        btnRecord.classList.add('recording');
+        recordText.innerText = 'Stop (00:00)';
+        recordInterval = setInterval(() => {
+            recordSeconds++;
+            const m = String(Math.floor(recordSeconds / 60)).padStart(2, '0');
+            const s = String(recordSeconds % 60).padStart(2, '0');
+            recordText.innerText = `Stop (${m}:${s})`;
+        }, 1000);
+    }
+
+    function stopRecord() {
+        if (!isRecording) return;
+        isRecording = false;
+        clearInterval(recordInterval);
+        btnRecord.classList.remove('recording');
+        recordText.innerText = 'Record';
+        simulateAnalysis('live_mic_recording.wav');
+    }
+
+    function cancelAction() {
+        if (isRecording) {
+            isRecording = false;
+            clearInterval(recordInterval);
+            btnRecord.classList.remove('recording');
+            recordText.innerText = 'Record';
+        }
+    }
+
+    window.addEventListener('keydown', (e) => {
+        // Ignore while typing in inputs
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+
+        if (e.key === 'u' || e.key === 'U') {
+            e.preventDefault();
+            fileInput.click();
+        } else if (e.key === 'r' || e.key === 'R') {
+            e.preventDefault();
+            toggleRecord();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelAction();
+        }
+    });
+
+    function handleFileSelect(file) {
+        simulateAnalysis(file.name);
+    }
+
+    function simulateAnalysis(fileName) {
+        document.getElementById('result-filename').innerText = fileName;
+        document.getElementById('result-panel-title').innerText = 'Analyzing...';
+        setTimeout(() => {
+            document.getElementById('result-panel-title').innerText = 'Result';
+            waveAnimStartTime = performance.now();
+            requestAnimationFrame(animateWaveformBars);
+        }, 600);
+    }
+
+    function retryLastAction() {
+        document.getElementById('input-error-line').style.display = 'none';
+        fileInput.click();
+    }
+    </script>
+</body>
+</html>
