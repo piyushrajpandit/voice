@@ -16,108 +16,115 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/icon-180.png">
     <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/icon-32.png">
+    <!-- Google Fonts: Geist (400, 500, 600, 700) & Geist Mono (400, 500) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
     <title>Voice Clone Shield</title>
     <script>
         (function() {
             try {
-                const savedTheme = localStorage.getItem('vcs_theme');
-                if (savedTheme === 'dark' || savedTheme === 'light') {
-                    document.documentElement.setAttribute('data-theme', savedTheme);
-                } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    document.documentElement.setAttribute('data-theme', 'dark');
-                }
+                document.documentElement.setAttribute('data-theme', 'dark');
             } catch (e) {}
         })();
     </script>
     <style>
         :root {
-            /* Apple-restrained light color system */
-            --bg-page: #f5f5f7;
-            --bg-surface: #ffffff;
-            --bg-subtle: #f0f0f2;
-            --bg-secondary: #e8e8ed;
-            --border-subtle: rgba(0, 0, 0, 0.08);
-            --border-strong: rgba(0, 0, 0, 0.16);
-            --text-primary: #1d1d1f;
-            --text-secondary: #6e6e73;
-            --text-tertiary: #86868b;
-            --accent-primary: #0071e3;
-            --accent-hover: #0077ed;
-            --accent-active: #0062c4;
-            --status-safe: #1a7f37;
-            --status-safe-bg: #edf7ed;
-            --status-safe-border: #bbf7d0;
-            --status-danger: #cf222e;
-            --status-danger-bg: #fdf2f2;
-            --status-danger-border: #fecaca;
-            --status-warning: #9a6700;
-            --status-warning-bg: #fff8e6;
-            --status-warning-border: #fed7aa;
-            --nav-bg: rgba(245, 245, 247, 0.92);
-            --bg-overlay-start: rgba(245, 245, 247, 0.7);
-            --bg-overlay-end: rgba(245, 245, 247, 0.92);
+            /* Reference Design Tokens */
+            --bg: #050505;
+            --panel: #0a0808;
+            --line: #221214;
+            --line2: #3a1b1f;
+            --text: #f2eeee;
+            --sub: #9a8f90;
+            --dim: #5e5456;
+            --risk: #ff2d3d;
+            --ok: #46c28a;
+            --warning: #f5b82e;
 
-            /* Floating Glass Buttons (Light Theme) */
-            --glass-btn-bg: rgba(255, 255, 255, 0.55);
-            --glass-btn-border: rgba(0, 0, 0, 0.08);
-            --glass-btn-text: var(--text-secondary);
-            --glass-btn-hover-bg: rgba(255, 255, 255, 0.85);
-            --glass-btn-hover-border: rgba(0, 0, 0, 0.16);
-            --glass-btn-active-bg: rgba(255, 255, 255, 0.96);
-            --glass-btn-active-border: rgba(0, 113, 227, 0.45);
-            --glass-btn-active-glow: 0 0 16px rgba(0, 113, 227, 0.16), 0 2px 6px rgba(0, 0, 0, 0.04);
+            /* Flat Token Mappings */
+            --bg-page: var(--bg);
+            --bg-surface: var(--panel);
+            --bg-subtle: #0d0a0b;
+            --bg-secondary: #140d0f;
+            --border-subtle: var(--line);
+            --border-strong: var(--line2);
+            --text-primary: var(--text);
+            --text-secondary: var(--sub);
+            --text-tertiary: var(--dim);
+            --accent-primary: var(--risk);
+            --accent-hover: #ff4755;
+            --accent-active: #d61f2f;
+            --status-safe: var(--ok);
+            --status-safe-bg: rgba(70, 194, 138, 0.12);
+            --status-safe-border: rgba(70, 194, 138, 0.35);
+            --status-danger: var(--risk);
+            --status-danger-bg: rgba(255, 45, 61, 0.12);
+            --status-danger-border: rgba(255, 45, 61, 0.35);
+            --status-warning: var(--warning);
+            --status-warning-bg: rgba(245, 184, 46, 0.12);
+            --status-warning-border: rgba(245, 184, 46, 0.35);
+            --nav-bg: rgba(5, 5, 5, 0.95);
+            --bg-overlay-start: rgba(5, 5, 5, 0.8);
+            --bg-overlay-end: rgba(5, 5, 5, 0.98);
+
+            /* Glass & Button Overrides (Flat, 4px radius) */
+            --glass-btn-bg: #110b0c;
+            --glass-btn-border: var(--line);
+            --glass-btn-text: var(--sub);
+            --glass-btn-hover-bg: #1a1012;
+            --glass-btn-hover-border: var(--line2);
+            --glass-btn-active-bg: var(--risk);
+            --glass-btn-active-border: var(--risk);
+            --glass-btn-active-glow: none;
             
-            /* Typography & Metrics */
-            --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
-            --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-            --radius-sm: 6px;
-            --radius-md: 10px;
-            --radius-lg: 14px;
-            --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
-            --shadow-elevated: 0 4px 14px rgba(0, 0, 0, 0.06);
-            --focus-ring: 0 0 0 3px rgba(0, 113, 227, 0.25);
+            /* Typography & Metrics (Geist + Geist Mono, Flat 6px panel / 4px btn radius) */
+            --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+            --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 6px;
+            --shadow-card: none;
+            --shadow-elevated: none;
+            --focus-ring: 0 0 0 1px var(--risk);
         }
 
         [data-theme="dark"] {
-            /* Defensive cybersecurity dark palette */
-            --bg-page: #0d1117;
-            --bg-surface: #161b22;
-            --bg-subtle: #21262d;
-            --bg-secondary: #30363d;
-            --border-subtle: rgba(255, 255, 255, 0.1);
-            --border-strong: rgba(255, 255, 255, 0.18);
-            --text-primary: #f0f6fc;
-            --text-secondary: #8b949e;
-            --text-tertiary: #6e7681;
-            --accent-primary: #2f81f7;
-            --accent-hover: #58a6ff;
-            --accent-active: #1f6feb;
-            --status-safe: #3fb950;
-            --status-safe-bg: rgba(46, 160, 67, 0.15);
-            --status-safe-border: rgba(46, 160, 67, 0.35);
-            --status-danger: #f85149;
-            --status-danger-bg: rgba(248, 81, 73, 0.15);
-            --status-danger-border: rgba(248, 81, 73, 0.35);
-            --status-warning: #d29922;
-            --status-warning-bg: rgba(210, 153, 34, 0.15);
-            --status-warning-border: rgba(210, 153, 34, 0.35);
-            --nav-bg: rgba(13, 17, 23, 0.92);
-            --bg-overlay-start: rgba(13, 17, 23, 0.8);
-            --bg-overlay-end: rgba(13, 17, 23, 0.95);
+            --bg-page: var(--bg);
+            --bg-surface: var(--panel);
+            --bg-subtle: #0d0a0b;
+            --bg-secondary: #140d0f;
+            --border-subtle: var(--line);
+            --border-strong: var(--line2);
+            --text-primary: var(--text);
+            --text-secondary: var(--sub);
+            --text-tertiary: var(--dim);
+            --accent-primary: var(--risk);
+            --accent-hover: #ff4755;
+            --accent-active: #d61f2f;
+            --status-safe: var(--ok);
+            --status-safe-bg: rgba(70, 194, 138, 0.12);
+            --status-safe-border: rgba(70, 194, 138, 0.35);
+            --status-danger: var(--risk);
+            --status-danger-bg: rgba(255, 45, 61, 0.12);
+            --status-danger-border: rgba(255, 45, 61, 0.35);
+            --status-warning: var(--warning);
+            --status-warning-bg: rgba(245, 184, 46, 0.12);
+            --status-warning-border: rgba(245, 184, 46, 0.35);
+            --nav-bg: rgba(5, 5, 5, 0.95);
+            --shadow-card: none;
+            --shadow-elevated: none;
+        }
 
-            /* Floating Glass Buttons (Dark Theme) */
-            --glass-btn-bg: rgba(255, 255, 255, 0.05);
-            --glass-btn-border: rgba(255, 255, 255, 0.12);
-            --glass-btn-text: #8b949e;
-            --glass-btn-hover-bg: rgba(255, 255, 255, 0.09);
-            --glass-btn-hover-border: rgba(255, 255, 255, 0.22);
-            --glass-btn-active-bg: rgba(255, 255, 255, 0.14);
-            --glass-btn-active-border: rgba(88, 166, 255, 0.5);
-            --glass-btn-active-glow: 0 0 18px rgba(47, 129, 247, 0.26), 0 2px 8px rgba(0, 0, 0, 0.35);
+        ::selection {
+            background: var(--risk);
+            color: #ffffff;
+        }
 
-            --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.4);
-            --shadow-elevated: 0 6px 20px rgba(0, 0, 0, 0.6);
-            --focus-ring: 0 0 0 3px rgba(47, 129, 247, 0.35);
+        /* Enforce tabular numbers on all metrics, values, and timestamps */
+        .metric-value, .stat-value, .timestamp, .duration, .score, code, kbd {
+            font-family: var(--font-mono);
+            font-variant-numeric: tabular-nums;
         }
 
         * {
