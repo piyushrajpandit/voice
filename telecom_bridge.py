@@ -10,7 +10,27 @@ import io
 import time
 import json
 import base64
-import audioop
+try:
+    import audioop
+except ImportError:
+    try:
+        import audioop_lts as audioop
+    except ImportError:
+        class _AudioopFallback:
+            @staticmethod
+            def ulaw2lin(chunk_bytes, width):
+                lut = np.zeros(256, dtype=np.int16)
+                for i in range(256):
+                    u = ~i & 0xFF
+                    sign = (u & 0x80)
+                    exponent = (u >> 4) & 0x07
+                    mantissa = u & 0x0F
+                    sample = ((mantissa << 3) + 0x84) << exponent
+                    sample -= 0x84
+                    lut[i] = -sample if sign else sample
+                raw = np.frombuffer(chunk_bytes, dtype=np.uint8)
+                return lut[raw].tobytes()
+        audioop = _AudioopFallback()
 import numpy as np
 import scipy.signal
 from typing import Dict, Any, Optional, Callable
