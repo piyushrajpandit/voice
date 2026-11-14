@@ -135,14 +135,14 @@
 
         html {
             scroll-behavior: smooth;
-            font-size: 18.5px;
+            font-size: 19.5px;
         }
 
         body {
             background-color: var(--bg-page);
             color: var(--text-primary);
             font-family: var(--font-sans);
-            font-size: 18px;
+            font-size: 19px;
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
             text-rendering: optimizeLegibility;
@@ -182,34 +182,36 @@
             background: radial-gradient(circle at center, transparent 30%, var(--bg) 100%);
         }
 
-        /* ── Top Navigation (56px tall, 1px bottom border, max-width 880px, centered) ── */
+        /* ── Top Navigation (68px tall, semi-transparent blur, max-width 920px) ── */
         .site-nav {
             position: sticky;
             top: 0;
             z-index: 100;
-            background: var(--bg);
+            background: rgba(5, 5, 5, 0.75);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             border-bottom: 1px solid var(--line);
         }
 
         .nav-inner {
-            max-width: 880px;
+            max-width: 920px;
             margin: 0 auto;
-            padding: 0 16px;
-            height: 56px;
-            min-height: 56px;
+            padding: 0 20px;
+            height: 68px;
+            min-height: 68px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 20px;
+            gap: 24px;
         }
 
         .nav-brand {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             text-decoration: none;
             color: var(--text);
-            font-size: 19px;
+            font-size: 21px;
             font-weight: 700;
             letter-spacing: -0.02em;
             flex-shrink: 0;
@@ -217,16 +219,18 @@
 
         .nav-brand svg {
             color: var(--risk);
+            width: 22px;
+            height: 22px;
         }
 
-        /* ── Nav Tabs (Centered, 1px active red underline) ── */
+        /* ── Nav Tabs (Centered, prominent, 2px active red underline) ── */
         .nav-tabs {
             display: flex;
             align-items: center;
             background: transparent;
             border: none;
             padding: 0;
-            gap: 24px;
+            gap: 32px;
         }
 
         @media (max-width: 640px) {
@@ -239,13 +243,14 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 18px 0;
+            padding: 22px 0;
             border: none;
             background: transparent;
             color: var(--sub);
             font-family: var(--font-sans);
-            font-size: 16.5px;
+            font-size: 18px;
             font-weight: 600;
+            letter-spacing: -0.01em;
             cursor: pointer;
             position: relative;
             white-space: nowrap;
@@ -271,10 +276,10 @@
         .nav-tab-btn.active::after {
             content: '';
             position: absolute;
-            bottom: -1px;
+            bottom: 0;
             left: 0;
             right: 0;
-            height: 1px;
+            height: 2px;
             background: var(--risk);
         }
 
@@ -286,10 +291,10 @@
             flex-shrink: 0;
         }
 
-        /* 10px blinking status dot */
+        /* 12px blinking status dot */
         .status-dot {
-            width: 10px;
-            height: 10px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             background-color: var(--risk);
             animation: pulse-dot 1.2s ease-in-out infinite;
@@ -465,9 +470,9 @@
         .page-container {
             position: relative;
             z-index: 2;
-            max-width: 880px;
+            max-width: 920px;
             margin: 0 auto;
-            padding: 24px 20px 80px;
+            padding: 28px 20px 90px;
         }
 
         /* ── Segmented Mode Navigation (Legacy Fallback) ── */
@@ -479,23 +484,26 @@
         .product-grid {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 16px;
-            max-width: 880px;
+            gap: 18px;
+            max-width: 920px;
             margin: 0 auto;
             align-items: start;
         }
 
         .card {
-            background: var(--panel);
+            background: rgba(10, 8, 8, 0.72);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--line);
-            border-radius: 6px;
-            padding: 24px;
-            box-shadow: none;
-            transition: border-color 200ms ease;
+            border-radius: 8px;
+            padding: 26px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+            transition: border-color 200ms ease, background 200ms ease;
         }
 
         .card:hover {
             border-color: rgba(255, 45, 61, 0.45);
+            background: rgba(14, 10, 11, 0.82);
         }
 
         .card-header {
@@ -537,10 +545,12 @@
 
         /* ── File Upload Drop Zone ── */
         .dropzone {
-            border: 1px dashed var(--line2);
-            background: var(--panel);
-            border-radius: 4px;
-            padding: 32px 20px;
+            border: 1.5px dashed var(--line2);
+            background: rgba(12, 10, 10, 0.45);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: 6px;
+            padding: 36px 20px;
             text-align: center;
             cursor: pointer;
             transition: border-color 150ms ease, background-color 150ms ease;
@@ -549,7 +559,7 @@
 
         .dropzone:hover, .dropzone.dragover {
             border-color: var(--risk);
-            background: rgba(255, 45, 61, 0.05);
+            background: rgba(255, 45, 61, 0.08);
         }
 
         .dropzone:focus-visible {
@@ -765,16 +775,19 @@
         }
 
         .metric-box {
-            background: var(--panel);
+            background: rgba(12, 10, 10, 0.55);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             border: 1px solid var(--line);
             border-radius: 6px;
-            padding: 12px;
+            padding: 14px;
             text-align: center;
-            transition: border-color 200ms ease;
+            transition: border-color 200ms ease, background 200ms ease;
         }
 
         .metric-box:hover {
             border-color: rgba(255, 45, 61, 0.35);
+            background: rgba(18, 12, 14, 0.7);
         }
 
         .metric-label {
@@ -1090,16 +1103,19 @@
         }
 
         .kpi-card {
-            background: var(--panel);
+            background: rgba(10, 8, 8, 0.72);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--line);
-            border-radius: 6px;
-            padding: 18px 16px;
+            border-radius: 8px;
+            padding: 20px 18px;
             box-shadow: none;
-            transition: border-color 200ms ease;
+            transition: border-color 200ms ease, background 200ms ease;
         }
 
         .kpi-card:hover {
             border-color: rgba(255, 45, 61, 0.35);
+            background: rgba(14, 10, 11, 0.82);
         }
 
         .kpi-label {
@@ -1321,7 +1337,7 @@
     <header class="site-nav">
         <div class="nav-inner">
             <a href="/" class="nav-brand">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                 </svg>
                 <span>Voice Clone Shield</span>

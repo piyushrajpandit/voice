@@ -37,7 +37,7 @@
 
         html {
             scroll-behavior: smooth;
-            font-size: 18.5px;
+            font-size: 19.5px;
         }
 
         body {
@@ -50,7 +50,7 @@
             position: relative;
             overflow-x: hidden;
             line-height: 1.6;
-            font-size: 18px;
+            font-size: 19px;
         }
 
         /* Top 2px solid risk line */
@@ -96,12 +96,14 @@
             padding: 0 20px 80px;
         }
 
-        /* Header (56px tall, 1px bottom border) */
+        /* Header (68px tall, semi-transparent blur) */
         header.site-header {
             position: sticky;
             top: 0;
             z-index: 100;
-            background: var(--bg);
+            background: rgba(5, 5, 5, 0.75);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             border-bottom: 1px solid var(--line);
         }
 
@@ -109,7 +111,8 @@
             max-width: 960px;
             margin: 0 auto;
             padding: 0 20px;
-            height: 56px;
+            height: 68px;
+            min-height: 68px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -118,8 +121,8 @@
         .header-brand {
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-size: 19px;
+            gap: 12px;
+            font-size: 21px;
             font-weight: 700;
             letter-spacing: -0.02em;
             color: var(--text);
@@ -129,12 +132,14 @@
         .header-brand svg {
             color: var(--risk);
             flex-shrink: 0;
+            width: 22px;
+            height: 22px;
         }
 
         nav.header-nav {
             display: flex;
             align-items: center;
-            gap: 24px;
+            gap: 32px;
         }
 
         @media (max-width: 640px) {
@@ -144,12 +149,12 @@
         }
 
         .nav-link {
-            font-size: 16.5px;
+            font-size: 18px;
             font-weight: 600;
             color: var(--sub);
             text-decoration: none;
             position: relative;
-            padding: 17px 0;
+            padding: 22px 0;
             transition: color 150ms ease;
             background: none;
             border: none;
@@ -256,17 +261,21 @@
 
         /* Reusable Card / Panel */
         .card {
-            background: var(--panel);
+            background: rgba(10, 8, 8, 0.72);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--line);
-            border-radius: 6px;
+            border-radius: 8px;
             margin-bottom: 20px;
-            transition: border-color 200ms ease;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+            transition: border-color 200ms ease, background 200ms ease;
             position: relative;
             overflow: hidden;
         }
 
         .card:hover {
             border-color: rgba(255, 45, 61, 0.45);
+            background: rgba(14, 10, 11, 0.82);
         }
 
         .card-header {
@@ -414,7 +423,9 @@
         }
 
         .stat-card {
-            background: var(--bg);
+            background: rgba(12, 10, 10, 0.55);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             border: 1px solid var(--line);
             border-radius: 4px;
             padding: 12px;
@@ -453,15 +464,18 @@
         }
 
         .layer-item {
-            background: var(--bg);
+            background: rgba(12, 10, 10, 0.55);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             border: 1px solid var(--line);
             border-radius: 6px;
             padding: 20px;
-            transition: border-color 150ms ease;
+            transition: border-color 150ms ease, background 150ms ease;
         }
 
         .layer-item:hover {
             border-color: rgba(255, 45, 61, 0.45);
+            background: rgba(18, 12, 14, 0.7);
         }
 
         .layer-badge {
