@@ -462,9 +462,11 @@
 
         /* ── Main Layout ── */
         .page-container {
-            max-width: 1080px;
+            position: relative;
+            z-index: 2;
+            max-width: 880px;
             margin: 0 auto;
-            padding: 24px 24px 80px;
+            padding: 24px 20px 80px;
         }
 
         /* ── Segmented Mode Navigation (Legacy Fallback) ── */
@@ -476,18 +478,23 @@
         .product-grid {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 24px;
-            max-width: 860px;
+            gap: 16px;
+            max-width: 880px;
             margin: 0 auto;
             align-items: start;
         }
 
         .card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-lg);
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 6px;
             padding: 24px;
-            box-shadow: var(--shadow-card);
+            box-shadow: none;
+            transition: border-color 200ms ease;
+        }
+
+        .card:hover {
+            border-color: rgba(255, 45, 61, 0.45);
         }
 
         .card-header {
@@ -496,43 +503,58 @@
             justify-content: space-between;
             margin-bottom: 18px;
             padding-bottom: 14px;
-            border-bottom: 1px solid var(--border-subtle);
+            border-bottom: 1px solid var(--line);
         }
 
         .card-title {
-            font-size: 1.05rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
             font-weight: 600;
             letter-spacing: -0.01em;
-            color: var(--text-primary);
+            color: var(--text);
+            text-transform: uppercase;
+        }
+
+        .card-title::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 1px;
+            background: var(--risk);
+            flex-shrink: 0;
         }
 
         .card-meta {
-            font-size: 0.8rem;
-            color: var(--text-tertiary);
+            font-size: 12px;
+            color: var(--dim);
             font-family: var(--font-mono);
+            font-variant-numeric: tabular-nums;
         }
 
         /* ── File Upload Drop Zone ── */
         .dropzone {
-            border: 1.5px dashed var(--border-strong);
-            background: var(--bg-subtle);
-            border-radius: var(--radius-md);
-            padding: 36px 20px;
+            border: 1px dashed var(--line2);
+            background: var(--panel);
+            border-radius: 4px;
+            padding: 32px 20px;
             text-align: center;
             cursor: pointer;
-            transition: border-color 0.15s ease, background 0.15s ease;
+            transition: border-color 150ms ease, background-color 150ms ease;
             margin-bottom: 16px;
         }
 
         .dropzone:hover, .dropzone.dragover {
-            border-color: var(--accent-primary);
-            background: var(--bg-surface);
+            border-color: var(--risk);
+            background: rgba(255, 45, 61, 0.05);
         }
 
         .dropzone:focus-visible {
             outline: none;
-            border-color: var(--accent-primary);
-            box-shadow: var(--focus-ring);
+            border-color: var(--risk);
+            box-shadow: 0 0 0 2px rgba(255, 45, 61, 0.3);
         }
 
         .dropzone-icon {
@@ -742,11 +764,16 @@
         }
 
         .metric-box {
-            background: var(--bg-subtle);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-md);
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 6px;
             padding: 12px;
             text-align: center;
+            transition: border-color 200ms ease;
+        }
+
+        .metric-box:hover {
+            border-color: rgba(255, 45, 61, 0.35);
         }
 
         .metric-label {
@@ -1062,11 +1089,16 @@
         }
 
         .kpi-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-md);
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 6px;
             padding: 18px 16px;
-            box-shadow: var(--shadow-card);
+            box-shadow: none;
+            transition: border-color 200ms ease;
+        }
+
+        .kpi-card:hover {
+            border-color: rgba(255, 45, 61, 0.35);
         }
 
         .kpi-label {
@@ -1796,16 +1828,25 @@
     }
     window.addEventListener('resize', resizeBgCanvas);
 
-    if (canHover) {
-        window.addEventListener('mousemove', (e) => {
-            mouse.targetX = e.clientX;
-            mouse.targetY = e.clientY;
+    // Track mouse & touch coordinates across the full window
+    window.addEventListener('mousemove', (e) => {
+        mouse.targetX = e.clientX;
+        mouse.targetY = e.clientY;
+        mouse.active = true;
+    });
+    window.addEventListener('mouseleave', () => {
+        mouse.active = false;
+    });
+    window.addEventListener('touchmove', (e) => {
+        if (e.touches && e.touches[0]) {
+            mouse.targetX = e.touches[0].clientX;
+            mouse.targetY = e.touches[0].clientY;
             mouse.active = true;
-        });
-        window.addEventListener('mouseleave', () => {
-            mouse.active = false;
-        });
-    }
+        }
+    }, { passive: true });
+    window.addEventListener('touchend', () => {
+        mouse.active = false;
+    });
 
     function drawStaticGrid() {
         if (!bgCtx) return;
