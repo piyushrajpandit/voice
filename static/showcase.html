@@ -84,7 +84,7 @@
             height: 100vh;
             pointer-events: none;
             z-index: 1;
-            background: radial-gradient(circle at center, transparent 30%, var(--bg) 100%);
+            background: radial-gradient(circle at center, transparent 40%, rgba(5, 5, 5, 0.70) 100%);
         }
 
         /* App Container */
@@ -881,10 +881,10 @@
     const bgCanvas = document.getElementById('bg-canvas');
     const bgCtx = bgCanvas ? bgCanvas.getContext('2d') : null;
     let bgWidth = 0, bgHeight = 0;
-    const GRID_STEP = 34;
-    const DOT_SIZE = 1.5;
-    const INFLUENCE_RADIUS = 150;
-    const MAX_OFFSET = 14;
+    const GRID_STEP = 32;
+    const DOT_SIZE = 2.0;
+    const INFLUENCE_RADIUS = 230;
+    const MAX_OFFSET = 18;
 
     const mouse = { x: -9999, y: -9999, targetX: -9999, targetY: -9999, active: false };
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -972,22 +972,29 @@
                 let alpha = osc;
                 let isRed = false;
 
+                let curDotSize = DOT_SIZE;
                 if (dist < INFLUENCE_RADIUS) {
                     const factor = 1 - dist / INFLUENCE_RADIUS;
                     const push = factor * MAX_OFFSET;
                     const angle = Math.atan2(dy, dx);
                     renderX += Math.cos(angle) * push;
                     renderY += Math.sin(angle) * push;
-                    alpha = Math.min(0.85, osc + factor * 0.7);
+                    alpha = Math.min(1.0, 0.40 + factor * 0.60);
+                    curDotSize = DOT_SIZE + factor * 2.2;
                     isRed = true;
                 }
 
                 if (isRed) {
+                    bgCtx.shadowColor = 'rgba(255, 45, 61, 0.85)';
+                    bgCtx.shadowBlur = 8;
                     bgCtx.fillStyle = `rgba(255, 45, 61, ${alpha})`;
+                    bgCtx.fillRect(renderX - curDotSize / 2, renderY - curDotSize / 2, curDotSize, curDotSize);
+                    bgCtx.shadowColor = 'transparent';
+                    bgCtx.shadowBlur = 0;
                 } else {
                     bgCtx.fillStyle = `rgba(242, 238, 238, ${alpha})`;
+                    bgCtx.fillRect(renderX - curDotSize / 2, renderY - curDotSize / 2, curDotSize, curDotSize);
                 }
-                bgCtx.fillRect(renderX - DOT_SIZE / 2, renderY - DOT_SIZE / 2, DOT_SIZE, DOT_SIZE);
             }
         }
 
