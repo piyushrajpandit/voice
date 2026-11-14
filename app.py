@@ -860,6 +860,15 @@ async def serve_index():
         content = f.read()
     return HTMLResponse(content=content, headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache"})
 
+@app.get("/showcase", response_class=HTMLResponse)
+@app.get("/demo", response_class=HTMLResponse)
+async def serve_showcase():
+    path = os.path.join(STATIC_DIR, "showcase.html")
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read(), headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+    return HTMLResponse(content="<h1>Showcase not found</h1>", status_code=404)
+
 @app.get("/privacy", response_class=HTMLResponse)
 async def serve_privacy():
     with open(os.path.join(STATIC_DIR, "privacy.html"), "r", encoding="utf-8") as f:
